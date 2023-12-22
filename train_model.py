@@ -13,7 +13,7 @@ from utils.prepare_data import get_train_test_data
 
 X_train, X_test, y_train, y_test = get_train_test_data()
 
-
+# from github
 def preproces_per_image(file_path):
     full_path = os.path.join(IMAGES_DIR, file_path)
     image = cv2.imread(full_path)
