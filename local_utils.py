@@ -25,6 +25,7 @@ def inspect_video(video_path, model=None, threshold=0.5):
                 break
             if model is not None:
                 y_pred = model.predict(np.expand_dims(cv2.resize(frame, (IMG_WIDTH, IMG_HEIGHT)), axis=0), verbose=0)
+                print(y_pred)
                 if y_pred > threshold:
                     cv2.putText(frame, "Anomaly", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                 else:

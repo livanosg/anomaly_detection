@@ -72,6 +72,3 @@ if __name__ == '__main__':
         download_data(URL_DATA_FILE)
     if not (os.listdir(ANOMALY_DIR) and os.listdir(NORMAL_DIR)):
         extract_images_from_video(VIDEO_FILE)
-
-    # time_func(apply_transformations)
-    # load_to_csv()

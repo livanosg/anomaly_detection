@@ -3,10 +3,10 @@ import numpy as np
 import tensorflow as tf
 from keras import Sequential, layers
 from matplotlib import pyplot as plt
+from sklearn.metrics import classification_report, roc_curve, auc
 
 from config import IMAGES_DIR, BATCH_SIZE, IMG_HEIGHT, IMG_WIDTH, EPOCHS, INPUT_SHAPE, VIDEO_FILE
 from local_utils import inspect_video
-from metrics import get_auc
 
 if tf.config.list_physical_devices('GPU'):
     strategy = tf.distribute.MirroredStrategy()
@@ -81,5 +81,31 @@ plt.show()
 
 labels = np.asarray(list(val_ds.unbatch().map(lambda x, y: y).as_numpy_iterator()))
 predictions = model.predict(val_ds.map(lambda x, y: x))
-get_auc(labels=labels, predictions=predictions)
+fpr, tpr, _ = roc_curve(labels, predictions)
+
+# Calculate the AUC
+roc_auc = auc(fpr, tpr)
+
+# Plot the ROC curve
+plt.figure(figsize=(8, 8))
+plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = {:.2f})'.format(roc_auc))
+plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Receiver Operating Characteristic (ROC) Curve')
+plt.legend(loc='lower right')
+plt.show()
+
+# Convert probabilities to binary predictions
+predictions = [1 if p > 0.5 else 0 for p in predictions]
+
+# Convert labels and predictions to numpy arrays
+labels = np.asarray(labels, dtype=np.int32)
+print(labels.shape)
+predictions = np.asarray(predictions, dtype=np.int32)
+print(predictions.shape)
+
+# Print the classification report
+print(classification_report(labels, predictions))
+
 inspect_video(VIDEO_FILE, model)
