@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 from keras import Sequential, layers
 from matplotlib import pyplot as plt
-from sklearn.metrics import classification_report, roc_curve, auc
+from sklearn.metrics import classification_report, roc_curve, auc, precision_recall_curve
 
 from config import IMAGES_DIR, BATCH_SIZE, IMG_HEIGHT, IMG_WIDTH, EPOCHS, INPUT_SHAPE, VIDEO_FILE, SEED
 from local_utils import inspect_video
@@ -36,9 +36,6 @@ with strategy.scope():
     a = train_ds.as_numpy_iterator()
     b = val_ds.as_numpy_iterator()
 
-    print(b.next())
-    exit()
-
     model = Sequential([
         layers.Rescaling(1. / 255, input_shape=INPUT_SHAPE),
         layers.SeparableConv2D(16, 3, depth_multiplier=5, padding='same', activation='relu'),
@@ -59,7 +56,8 @@ with strategy.scope():
                   metrics=['accuracy'])
 
     history = model.fit(train_ds, validation_data=val_ds, epochs=EPOCHS)
-    model.save('model.keras')
+
+model.save('model.keras')
 
 acc = history.history['accuracy']
 val_acc = history.history['val_accuracy']
@@ -83,30 +81,54 @@ plt.legend(loc='upper right')
 plt.title('Training and Validation Loss')
 
 labels = np.argmax(np.asarray(list(val_ds.unbatch().map(lambda x, y: y).as_numpy_iterator())), axis=-1)
-predictions = model.predict(val_ds.map(lambda x, y: x))
-y_prob = predictions[..., 1]
-print("y_prob.shape", y_prob.shape)
-fpr, tpr, _ = roc_curve(labels, y_prob)
+pred = model.predict(val_ds.map(lambda x, y: x))
+y_pred = pred[..., 1]
+fpr, tpr, roc_thresholds = roc_curve(labels, y_pred)
+threshold_idx = np.argmin(np.sqrt(np.power(fpr - 0, 2) + np.power(tpr - 1, 2)))
+threshold = roc_thresholds[threshold_idx]
+
+prec, rec, pr_thresholds = precision_recall_curve(y_true=labels, probas_pred=y_pred)
+pr_threshold_idx = np.argmin(np.sqrt(np.power(prec - 0, 2) + np.power(rec - 1, 2)))
+pr_threshold = pr_thresholds[pr_threshold_idx]
+# Calculate Euclidean distances to the top-left corner [0, 1]
+
 # Calculate the AUC
 roc_auc = auc(fpr, tpr)
+pr_auc = auc(prec, rec)
+
 # Plot the ROC curve
-plt.figure(figsize=(8, 8))
-plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = {:.2f})'.format(roc_auc))
+plt.figure(1)
+plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {np.round(roc_auc, 2)})\n'
+                                                   f'threshold: {threshold}')
 plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+plt.plot(fpr[threshold_idx], tpr[threshold_idx], c='red', marker='o', label=f'Threshold = {threshold}', s=100)
+
 plt.xlabel('False Positive Rate')
 plt.ylabel('True Positive Rate')
 plt.title('Receiver Operating Characteristic (ROC) Curve')
 plt.legend(loc='lower right')
 
+# Plot the ROC curve
+plt.figure(2)
+plt.plot(prec, rec, color='darkorange', lw=2, label=f'PR curve (area = {np.round(pr_auc, 2)})\n'
+                                                   f'threshold: {pr_threshold}')
+plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+plt.plot(prec[pr_threshold_idx], rec[pr_threshold_idx], c='red', marker='o', label=f'Threshold = {pr_threshold}', s=100)
+
+plt.xlabel('Precision')
+plt.ylabel('Recall')
+plt.title('Precision-Recall Curve')
+plt.legend(loc='lower right')
+
 # Convert probabilities to binary predictions
-predictions = [1 if p > 0.5 else 0 for p in y_prob]
+pred = [1 if p > threshold else 0 for p in y_pred]
 
 # Convert labels and predictions to numpy arrays
 labels = np.asarray(labels, dtype=np.int32)
-predictions = np.asarray(predictions, dtype=np.int32)
+pred = np.asarray(pred, dtype=np.int32)
 plt.show()
 
 # Print the classification report
-print(classification_report(labels, predictions, target_names=class_names))
+print(classification_report(labels, pred, target_names=class_names))
 
-inspect_video(VIDEO_FILE, model)
+inspect_video(VIDEO_FILE, model, threshold=threshold)
