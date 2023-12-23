@@ -14,20 +14,27 @@ def inspect_video(video_path, model=None, threshold=0.5):
     frame_index = 0
     paused = True
     while True:
-        window_title = f"Frame Index: {int(frame_index)} - {'Paused' if paused else 'Playing'}"
-        cv2.namedWindow("Video Window", cv2.WINDOW_KEEPRATIO)
-        cv2.setWindowTitle("Video Window", window_title)
         frame_index = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
         ret, frame = cap.read()
+        y_pred = -1
+        # todo color_code train and test set images
+        window_title = f"Frame Index: {int(frame_index)} - {'Paused' if paused else 'Playing'}\t"
+        if model:
+            probas_pred = model.predict(np.expand_dims(cv2.resize(frame, (IMG_WIDTH, IMG_HEIGHT)), axis=0), verbose=0)
+            y_pred = np.where(probas_pred > threshold, 1, 0)
+            window_title += (f"Threshold: {np.around(threshold, 4)}, "
+                             f"Probability: {np.around(probas_pred[0], 4)}, "
+                             f"Prediction: {np.around(y_pred[0], 4)}")
+
+        cv2.namedWindow("Video Window", cv2.WINDOW_KEEPRATIO)
+        cv2.setWindowTitle("Video Window", window_title)
         if not paused:
             # Check if the frame is successfully read
             if not ret:
                 print("Error: Failed to read frame.")
                 break
-            if model is not None:
-                y_pred = model.predict(np.expand_dims(cv2.resize(frame, (IMG_WIDTH, IMG_HEIGHT)), axis=0), verbose=0)
-                y_prob = y_pred[..., 1]
-                if y_prob > threshold:
+            if model:
+                if y_pred == 1:
                     cv2.putText(frame, "Anomaly", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                 else:
                     cv2.putText(frame, "Normal", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
@@ -37,7 +44,7 @@ def inspect_video(video_path, model=None, threshold=0.5):
             cv2.imshow("Video Window", frame)
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
 
-        key = cv2.waitKey(1) & 0xFF
+        key = cv2.waitKey(10) & 0xFF
         if key == ord('p'):
             paused = not paused
 
