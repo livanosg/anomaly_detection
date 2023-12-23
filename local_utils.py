@@ -1,4 +1,5 @@
 import cv2
+import tensorflow as tf
 import keras.models
 import numpy as np
 
@@ -26,7 +27,9 @@ def inspect_video(video_path, model=None, threshold=0.5):
             if model is not None:
                 y_pred = model.predict(np.expand_dims(cv2.resize(frame, (IMG_WIDTH, IMG_HEIGHT)), axis=0), verbose=0)
                 print(y_pred)
-                if y_pred > threshold:
+                y_prob = y_pred[..., 1]
+                print(y_prob)
+                if y_prob > threshold:
                     cv2.putText(frame, "Anomaly", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                 else:
                     cv2.putText(frame, "Normal", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)

@@ -5,7 +5,7 @@ from datetime import datetime
 URL_DATA_FILE = "https://repository.detectionnow.com/content/rgb/denim_elastane.mp4"
 FILE_NAME = os.path.basename(URL_DATA_FILE)
 
-SEED = None
+SEED = 1312
 TRIAL_ID = str(datetime.now().strftime("%Y%m%d%H%M%S"))
 ROOT_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(ROOT_DIR, "data")
