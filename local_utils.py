@@ -1,53 +1,55 @@
 import cv2
-import tensorflow as tf
 import keras.models
 import numpy as np
 
-from config import VIDEO_FILE, IMG_WIDTH, IMG_HEIGHT
+from config import IMG_WIDTH, IMG_HEIGHT, VIDEO_FILE
 
 
-def inspect_video(video_path, model=None, threshold=0.5):
+def inspect_video(video_path, model, threshold=0.5):
+    paused = True
+    cap = cv2.VideoCapture(video_path)
     if isinstance(model, str):
         model = keras.models.load_model(model, compile=False)
-    cap = cv2.VideoCapture(video_path)
-
-    frame_index = 0
-    paused = True
     while True:
         frame_index = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
         ret, frame = cap.read()
-        y_pred = -1
         # todo color_code train and test set images
         window_title = f"Frame Index: {int(frame_index)} - {'Paused' if paused else 'Playing'}\t"
-        if model:
-            probas_pred = model.predict(np.expand_dims(cv2.resize(frame, (IMG_WIDTH, IMG_HEIGHT)), axis=0), verbose=0)
-            y_pred = np.where(probas_pred > threshold, 1, 0)
-            window_title += (f"Threshold: {np.around(threshold, 4)}, "
-                             f"Probability: {np.around(probas_pred[0], 4)}, "
-                             f"Prediction: {np.around(y_pred[0], 4)}")
-
-        cv2.namedWindow("Video Window", cv2.WINDOW_KEEPRATIO)
-        cv2.setWindowTitle("Video Window", window_title)
-        if not paused:
-            # Check if the frame is successfully read
-            if not ret:
-                print("Error: Failed to read frame.")
-                break
-            if model:
-                if y_pred == 1:
-                    cv2.putText(frame, "Anomaly", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                else:
-                    cv2.putText(frame, "Normal", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.imshow("Video Window", frame)
-        else:
-            cv2.putText(frame, "Paused", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            cv2.imshow("Video Window", frame)
+        window_name = "Video Window"
+        text = ""
+        if not ret:
+            print("Error: Failed to read frame.")
+            break
+        if paused:
+            window_title = " ".join([window_title, "(Paused)"])
+            text = "".join([text, "(Paused)"])
+            color = (255, 0, 0)
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+        else:
+            if not model:
+                text = "Inspection".join(text)
+                color = (255, 0, 0)
+            else:
+                input_image = np.expand_dims(cv2.resize(frame, (IMG_WIDTH, IMG_HEIGHT)), axis=0).astype(float)
+                y_probability = model.predict(input_image, verbose=0)
+                y_prediction = np.where(y_probability > threshold, 1, 0)
 
+                window_title += (f"Threshold: {np.round(threshold, 5)}, "
+                                 f"Probability: {np.round(y_probability[0, 0], 5)}, "
+                                 f"Prediction: {np.round(y_prediction[0, 0], 5)}")
+                if y_prediction == 1:
+                    text = "Anomaly"
+                    color = (0, 0, 255)
+                else:
+                    text = "Normal"
+                    color = (0, 255, 0)
+        cv2.namedWindow(window_name, cv2.WINDOW_KEEPRATIO)
+        cv2.setWindowTitle(window_name, window_title)
+        cv2.putText(frame, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        cv2.imshow(window_name, frame)
         key = cv2.waitKey(10) & 0xFF
         if key == ord('p'):
             paused = not paused
-
         # Move back by 5 frames on 'b' key press
         elif key == ord('b'):
             frame_index = max(0, frame_index - 10)
@@ -64,7 +66,6 @@ def inspect_video(video_path, model=None, threshold=0.5):
         elif key == ord('d'):
             frame_index += 1
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
-
         # Quit if 'q' key is pressed
         elif key == ord('q'):
             break
@@ -74,4 +75,6 @@ def inspect_video(video_path, model=None, threshold=0.5):
 
 if __name__ == '__main__':
     model_path = "model.keras"
-    inspect_video(video_path=VIDEO_FILE, model=model_path, threshold=0.3)
+    threshold = np.load("threshold.npy")
+    model = keras.models.load_model(model_path)
+    inspect_video(video_path=VIDEO_FILE, model=model, threshold=threshold)
