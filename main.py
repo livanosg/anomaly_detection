@@ -29,6 +29,7 @@ with strategy.scope():
         subset="both",
         crop_to_aspect_ratio=True,
     )
+
     class_names = train_ds.class_names
     num_classes = len(class_names)
     train_ds = train_ds.cache().shuffle(train_ds.cardinality()).prefetch(buffer_size=tf.data.AUTOTUNE)

@@ -76,5 +76,5 @@ def inspect_video(video_path, model, threshold=0.5):
 if __name__ == '__main__':
     model_path = "model.keras"
     threshold = np.load("threshold.npy")
-    model = keras.models.load_model(model_path)
-    inspect_video(video_path=VIDEO_FILE, model=model, threshold=threshold)
+    # model = keras.models.load_model(model_path)
+    inspect_video(video_path=VIDEO_FILE, model=model_path, threshold=threshold)
