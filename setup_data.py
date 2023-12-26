@@ -73,9 +73,9 @@ def _get_label(image_path):
 
 
 def create_csv():
-    data = pd.DataFrame(data={"image": os.listdir(IMAGES_DIR)})
-    data["labels"] = data["image"].map(_get_label)
-    data.sort_values("image", key=lambda x: x.map(lambda y: os.path.basename(os.path.splitext(y)[0])[-4:]),
+    data = pd.DataFrame(data={"images": os.listdir(IMAGES_DIR)})
+    data["labels"] = data["images"].map(_get_label)
+    data.sort_values("images", key=lambda x: x.map(lambda y: os.path.basename(os.path.splitext(y)[0])[-4:]),
                      inplace=True)
     data.to_csv(os.path.join(DATA_DIR, "data.csv"), index=False)
 
@@ -90,3 +90,4 @@ if __name__ == '__main__':
 
     download_data(url=video_url, save_path=file_local_path)
     extract_images(video_path=file_local_path)
+    create_csv()
