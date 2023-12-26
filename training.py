@@ -1,17 +1,13 @@
-import os
-from datetime import datetime
-
+import tensorflow as tf
 import keras.losses
 import pandas as pd
-import tensorflow as tf
 
-from config import TRIALS_DIR, TRAIN_DIR, VALIDATION_DIR, CLASS_NAMES, MODEL_NAME, HISTORY_NAME
-from hyper_parameters import BATCH_SIZE, INPUT_SHAPE, SEED, LEARNING_RATE, EPOCHS
-from model import model
+from config import BATCH_SIZE, LEARNING_RATE, EPOCHS
+from model import get_model
+from dataset import get_dataset
 
 
-def training(model_path, history_path):
-
+def model_training(model_path, backup_dir, history_path):
     if tf.config.list_physical_devices('GPU'):
         strategy = tf.distribute.MirroredStrategy()
     else:
@@ -19,51 +15,29 @@ def training(model_path, history_path):
 
     global_batch_size = BATCH_SIZE * strategy.num_replicas_in_sync
     with strategy.scope():
-        train_data = keras.utils.image_dataset_from_directory(
-            directory=TRAIN_DIR,
-            labels="inferred",
-            label_mode="binary",
-            class_names=CLASS_NAMES,
-            color_mode="rgb",
-            batch_size=global_batch_size,
-            image_size=INPUT_SHAPE[:-1],
-            shuffle=False,
-            seed=SEED)
+        train_data = get_dataset("train", batch_size=global_batch_size)
+        validation_data = get_dataset("validation", batch_size=global_batch_size)
 
-        validation_data = keras.utils.image_dataset_from_directory(
-            directory=VALIDATION_DIR,
-            labels="inferred",
-            label_mode="binary",
-            class_names=CLASS_NAMES,
-            color_mode="rgb",
-            batch_size=global_batch_size,
-            image_size=INPUT_SHAPE[:-1],
-            shuffle=False,
-            seed=SEED)
+        training_model = get_model()
+        training_model.compile(optimizer=keras.optimizers.Adam(learning_rate=LEARNING_RATE),
+                               loss=keras.losses.CategoricalFocalCrossentropy(), metrics=["accuracy"])
+    training_history = training_model.fit(x=train_data,
+                                          validation_data=validation_data,
+                                          epochs=EPOCHS,
+                                          callbacks=[
+                                              # keras.callbacks.EarlyStopping(patience=20,
+                                              #                               restore_best_weights=True,
+                                              #                               verbose=1),
+                                              keras.callbacks.ReduceLROnPlateau(patience=10,
+                                                                                cooldown=5,
+                                                                                verbose=1),
+                                              keras.callbacks.ModelCheckpoint(filepath=model_path,
+                                                                              save_best_only=True,
+                                                                              verbose=1),
+                                              keras.callbacks.BackupAndRestore(backup_dir,
+                                                                               delete_checkpoint=False)],
+                                          verbose=1)
+    if len(training_history.history["loss"]) > 0:
+        pd.DataFrame.from_dict(training_history.history).to_csv(history_path, index=False)
 
-        train_data = train_data.cache().shuffle(train_data.cardinality()).prefetch(buffer_size=tf.data.AUTOTUNE)
-        validation_data = validation_data.cache().shuffle(train_data.cardinality()).prefetch(buffer_size=tf.data.AUTOTUNE)
-
-        model.compile(optimizer=keras.optimizers.Adam(learning_rate=LEARNING_RATE),
-                      loss=keras.losses.BinaryCrossentropy())
-
-    history = model.fit(x=train_data,
-                        validation_data=validation_data,
-                        epochs=EPOCHS,
-                        callbacks=[keras.callbacks.EarlyStopping(patience=20, restore_best_weights=True, verbose=1),
-                                   keras.callbacks.ReduceLROnPlateau(patience=10, cooldown=5, verbose=1),
-                                   keras.callbacks.ModelCheckpoint(filepath=model_path, save_best_only=True,
-                                                                   verbose=1)], verbose=1)
-
-    history_df = pd.DataFrame.from_dict(history.history)
-    history_df.to_csv(history_path, index=False)
-
-    # model.save(os.path.join(TRIALS_DIR, f"{TRIAL_ID}", "model.keras"))
-    return model
-
-
-if __name__ == '__main__':
-    TRIAL_ID = str(datetime.now().strftime("%Y%m%d%H%M%S"))
-    model_path = os.path.join(TRIALS_DIR, TRIAL_ID, MODEL_NAME)
-    history_path = os.path.join(TRIALS_DIR, TRIAL_ID, HISTORY_NAME)
-    training(model_path, history_path)
+    return training_model
