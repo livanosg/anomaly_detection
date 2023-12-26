@@ -4,7 +4,7 @@ import shutil
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from config import IMAGES_DIR, DATA_DIR, TRAIN_DIR, TEST_DIR, VALIDATION_DIR, ANOMALY_INDICES
+from config import IMAGES_DIR, DATA_DIR, ANOMALY_INDICES, TRAIN_DIR, VALIDATION_DIR, TEST_DIR
 
 
 def split_train_val_test(val_size=0.1, test_size=0.1):
