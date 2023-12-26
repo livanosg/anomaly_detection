@@ -4,37 +4,25 @@ from datetime import datetime
 import cv2
 import keras.models
 import numpy as np
-from config import TRIALS_DIR, IMAGES_DIR, MODEL_NAME, HISTORY_NAME, THRESHOLD_NAME
-from hyper_parameters import INPUT_SHAPE
+
+from config import TRIALS_DIR
+from dataset import get_dataset_predictions
 
 
 def get_latest_trial_id():
-    return sorted(os.listdir(TRIALS_DIR), key=lambda x: datetime.strptime(x, "%Y%m%d%H%M%S"))[-1]
+    latest_trial_id = sorted(os.listdir(TRIALS_DIR), key=lambda x: datetime.strptime(x, "%Y%m%d%H%M%S"))[-1]
+    print("latest_trial_id", latest_trial_id)
+    return latest_trial_id
 
 
-def trial_dirs(trial_id):
-    trial_dir = os.path.join(TRIALS_DIR, trial_id)
-    model_path = os.path.join(str(trial_dir), MODEL_NAME)
-    history_path = os.path.join(str(trial_dir), HISTORY_NAME)
-    threshold_path = os.path.join(str(trial_dir), THRESHOLD_NAME)
-    return trial_dir, model_path, history_path, threshold_path
-
-
-def inspect_video(video_path, model, threshold=0.5):
+def inspect_data(model, mode, threshold=0.5):
     paused = False
-    all_ds = keras.utils.image_dataset_from_directory(
-        directory=IMAGES_DIR,
-        label_mode=None,
-        batch_size=1,
-        image_size=INPUT_SHAPE[:-1],
-        shuffle=False,
-        crop_to_aspect_ratio=True
-    )
+    x_input, y_output, y_true = get_dataset_predictions(model=model, dataset=mode)
     if isinstance(model, str):
         model = keras.models.load_model(model, compile=False)
     frame_index = 0
-    for input_image in all_ds:
-        frame = np.squeeze(np.round(input_image, 0), axis=0).astype(np.uint8)
+    for input_image in x_input:
+        frame = np.squeeze(input_image, axis=0)
         print(frame)
         # while True:
         # frame_index = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
@@ -102,7 +90,5 @@ def inspect_video(video_path, model, threshold=0.5):
 
 
 if __name__ == '__main__':
-    model_path = "model.keras"
-    threshold = np.load("threshold.npy")
-    # model = keras.models.load_model(model_path)
-    inspect_video(video_path="VIDEO_FILE", model=model_path, threshold=threshold)
+
+    inspect_data(model=model,mode="test", threshold=threshold)
