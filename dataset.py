@@ -1,6 +1,5 @@
 import os
 import keras
-import numpy as np
 import tensorflow as tf
 from config import DATA_DIR, INPUT_SHAPE, CLASS_NAMES
 
@@ -15,13 +14,13 @@ def get_dataset(dataset, get_labels=True, batch_size=32):
         labels = "inferred"
         label_mode = "categorical"
         class_names = CLASS_NAMES
-
     ds = keras.utils.image_dataset_from_directory(directory=os.path.join(DATA_DIR, dataset),
                                                   labels=labels,
                                                   label_mode=label_mode,
                                                   class_names=class_names,
-                                                  image_size=INPUT_SHAPE[:-1],
+                                                  image_size=(1080, 1920) if dataset == "images" else INPUT_SHAPE[:-1],
                                                   batch_size=batch_size,
+                                                  shuffle=dataset is not "images",
                                                   seed=42)
 
     ds = ds.cache()
