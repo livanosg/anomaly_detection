@@ -69,10 +69,27 @@ def extract_images(video_path):
 
 
 def _get_label(image_path):
+    """
+    Determines the label (normal or anomaly) for an image based on its filename.
+
+    Args:
+        image_path (str): The path of the image file.
+
+    Returns:
+        int: 1 if the image is identified as an anomaly, 0 otherwise.
+    """
     return 1 if int(os.path.basename(os.path.splitext(image_path)[0])[-4:]) in ANOMALY_INDICES else 0
 
 
 def create_csv():
+    """
+    Creates a CSV file containing image filenames and corresponding labels.
+
+    The labels are determined using the _get_label function and are based on the presence
+    of images in the ANOMALY_INDICES set.
+
+    The resulting CSV file is saved in the DATA_DIR directory with the name "data.csv".
+    """
     data = pd.DataFrame(data={"images": os.listdir(IMAGES_DIR)})
     data["labels"] = data["images"].map(_get_label)
     data.sort_values("images", key=lambda x: x.map(lambda y: os.path.basename(os.path.splitext(y)[0])[-4:]),

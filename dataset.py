@@ -5,6 +5,17 @@ from config import DATA_DIR, INPUT_SHAPE, CLASS_NAMES
 
 
 def get_dataset(dataset, get_labels=True, batch_size=32):
+    """
+      Retrieves an image dataset from the specified directory.
+
+      Args:
+          dataset (str): The dataset type ("train", "validation", "test").
+          get_labels (bool): Whether to include labels in the dataset.
+          batch_size (int): Batch size for loading images.
+
+      Returns:
+          tf.data.Dataset: A TensorFlow Dataset containing images and labels (if specified).
+      """
     if not os.path.isdir(os.path.join(DATA_DIR, dataset)):
         raise NotADirectoryError(f"{os.path.join(DATA_DIR, dataset)} not a directory.")
     labels = None
@@ -18,7 +29,7 @@ def get_dataset(dataset, get_labels=True, batch_size=32):
                                                   labels=labels,
                                                   label_mode=label_mode,
                                                   class_names=class_names,
-                                                  image_size=(1080, 1920) if dataset == "images" else INPUT_SHAPE[:-1],
+                                                  image_size=INPUT_SHAPE[:-1],
                                                   batch_size=batch_size,
                                                   shuffle=dataset is not "images",
                                                   seed=42)
@@ -35,12 +46,34 @@ def get_dataset(dataset, get_labels=True, batch_size=32):
 
 
 def split_inputs_labels(ds):
+    """
+    Splits a dataset into input images and corresponding labels.
+
+    Args:
+        ds (tf.data.Dataset): The input dataset.
+
+    Returns:
+        Tuple[tf.data.Dataset, tf.data.Dataset]: Input images and labels datasets.
+    """
     x_input = ds.map(lambda images, _: images, num_parallel_calls=tf.data.AUTOTUNE)
     y_true = ds.map(lambda _, labels: labels, num_parallel_calls=tf.data.AUTOTUNE)
     return x_input, y_true
 
 
 def get_dataset_predictions(model, dataset, get_labels=True, batch_size=32):
+    """
+    Retrieves predictions from a model for a given dataset.
+
+    Args:
+        model (tf.keras.Model): The trained model.
+        dataset (str): The dataset type ("train", "validation", "test").
+        get_labels (bool): Whether to include labels in the dataset.
+        batch_size (int): Batch size for loading images.
+
+    Returns:
+        Tuple[tf.data.Dataset, np.ndarray, Optional[tf.data.Dataset]]:
+        Input images, model predictions, and true labels (if specified).
+    """
     ds = get_dataset(dataset=dataset, get_labels=get_labels, batch_size=batch_size)
     if get_labels:
         x_input, y_true = split_inputs_labels(ds)

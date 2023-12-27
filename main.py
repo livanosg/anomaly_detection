@@ -5,17 +5,18 @@ import keras.models
 import numpy as np
 
 from config import TRIALS_DIR
+from training import model_training
+
 from dataset import get_dataset, split_inputs_labels
 from metrics import plot_history, plot_pr_cure, print_metrics, plot_confusion_matrix
 from model import calculate_threshold
-from training import model_training
 
 if __name__ == '__main__':
 
-    trial_id = "latest"
-    mode = "test"
-    # trial_id = None
-    # mode = "train"
+    # trial_id = "latest"
+    # mode = "test"
+    trial_id = None
+    mode = "train"
     if trial_id is None:
         trial_id = str(datetime.now().strftime("%Y%m%d%H%M%S"))
     elif trial_id == "latest":
