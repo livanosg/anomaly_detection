@@ -2,8 +2,10 @@ import os
 
 import pandas as pd
 from matplotlib import pyplot as plt
-from sklearn.metrics import PrecisionRecallDisplay, accuracy_score, precision_score, recall_score, f1_score, \
-    roc_auc_score, classification_report, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score,
+                             roc_auc_score, PrecisionRecallDisplay,
+                             confusion_matrix,  ConfusionMatrixDisplay,
+                             classification_report)
 
 from config import CLASS_NAMES
 
@@ -106,7 +108,3 @@ def print_metrics(y_true, y_pred, metrics_dir):
     os.makedirs(os.path.dirname(report_file), exist_ok=True)
     report_df.to_csv(report_file, index=False)
     print(classification_report(y_true=y_true, y_pred=y_pred, target_names=CLASS_NAMES))
-
-    # Note that in binary classification, recall of the positive class is also known as "sensitivity";
-    # recall of the negative class is "specificity"
-    # classification_report(y_true=y_true, y_pred=y_pred, output_dict=True)

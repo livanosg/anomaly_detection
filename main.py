@@ -7,7 +7,7 @@ import numpy as np
 from config import TRIALS_DIR
 from training import model_training
 
-from dataset import get_dataset, split_inputs_labels
+from datasets import get_dataset, split_inputs_labels
 from metrics import plot_history, plot_pr_cure, print_metrics, plot_confusion_matrix
 from model import calculate_threshold
 
@@ -73,7 +73,7 @@ if __name__ == '__main__':
         model = keras.models.load_model(os.path.join(model_dir, "model.keras"))
         threshold = np.load(os.path.join(model_dir, "threshold.npy"))
 
-        x_input = get_dataset(dataset="validation", get_labels=False)
+        x_input = get_dataset(dataset="test", get_labels=False)
 
         y_pred_prob = model.predict(x_input).squeeze()
         y_pred_prob = y_pred_prob[:, 1]

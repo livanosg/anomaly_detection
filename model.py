@@ -14,7 +14,7 @@ def get_model():
     """
     return Sequential([
         layers.InputLayer(input_shape=INPUT_SHAPE),
-        layers.SeparableConv2D(16, 3, depth_multiplier=3, padding='valid', activation='relu'),  #, input_shape=INPUT_SHAPE
+        layers.SeparableConv2D(16, 3, depth_multiplier=3, padding='valid', activation='relu'),
         layers.SeparableConv2D(8, 5, depth_multiplier=2, padding='valid', activation='relu'),
         layers.MaxPooling2D(),
         layers.SeparableConv2D(8, 3, depth_multiplier=1, padding='same', activation='relu'),

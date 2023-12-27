@@ -5,12 +5,12 @@ import cv2
 import keras.models
 import numpy as np
 
-from config import TRIALS_DIR, INPUT_SHAPE, IMAGES_DIR, TEST_DIR
+from config import TRIALS_DIR, INPUT_SHAPE, IMAGES_DIR
 
 
 def get_latest_trial_id():
     """
-    Retrieves the latest trial ID from the trials directory.
+    Retrieves the latest trial ID from the trials' directory.
 
     Returns:
         str: The latest trial ID.
@@ -97,6 +97,5 @@ if __name__ == '__main__':
     # trial_id = "20231227113941"
     trial_dir = os.path.join(TRIALS_DIR, str(trial_id))
     model_dir = os.path.join(str(trial_dir), "model")
-    model = keras.models.load_model(os.path.join(model_dir, "model.keras"))
-    threshold = np.load(os.path.join(model_dir, "threshold.npy"))
-    inspect_data(model, threshold)
+    inspect_data(model=keras.models.load_model(os.path.join(model_dir, "model.keras")),
+                 threshold=np.load(os.path.join(model_dir, "threshold.npy")))

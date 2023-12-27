@@ -15,7 +15,6 @@ TRAIN_DIR = os.path.join(DATA_DIR, "train")
 VALIDATION_DIR = os.path.join(DATA_DIR, "validation")
 TEST_DIR = os.path.join(DATA_DIR, "test")
 
-CSV_FILE = os.path.join(DATA_DIR, "data.csv")
 VIDEO_FILE = os.path.join(RAW_DIR, os.path.basename(URL_DATA_FILE))
 CLASS_NAMES = ["normal", "anomaly"]
 ANOMALY_INDICES = list(itertools.chain(range(45, 538), range(799, 1266), range(1452, 2311),

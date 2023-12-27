@@ -1,13 +1,15 @@
 import os
+import shutil
 import sys
 from multiprocessing import Process
 
 import cv2
 import pandas as pd
 import requests
+from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-from config import RAW_DIR, IMAGES_DIR, ANOMALY_INDICES, DATA_DIR
+from config import RAW_DIR, IMAGES_DIR, ANOMALY_INDICES, DATA_DIR, TRAIN_DIR, VALIDATION_DIR, TEST_DIR
 
 
 def download_data(url, save_path):
@@ -81,6 +83,39 @@ def _get_label(image_path):
     return 1 if int(os.path.basename(os.path.splitext(image_path)[0])[-4:]) in ANOMALY_INDICES else 0
 
 
+def split_train_val_test(val_size=0.1, test_size=0.1):
+    """
+    Splits the dataset into training, validation, and test sets based on specified sizes.
+
+    Args:
+        val_size (float): Fraction of the dataset to use for validation.
+        test_size (float): Fraction of the dataset to use for testing.
+    """
+    df = pd.read_csv(os.path.join(DATA_DIR, "data.csv"))
+    images = df["images"].values
+    labels = df["labels"].values
+    x_train, x_temp, y_train, y_temp = train_test_split(images, labels,
+                                                        test_size=val_size + test_size,
+                                                        stratify=labels,
+                                                        random_state=1)
+    x_val, x_test, y_val, y_test = train_test_split(x_temp, y_temp,
+                                                    test_size=test_size / (val_size + test_size),
+                                                    stratify=y_temp,
+                                                    random_state=1)
+
+    for mode_dir, images in [[TRAIN_DIR, x_train], [VALIDATION_DIR, x_val], [TEST_DIR, x_test]]:
+        if os.path.isdir(mode_dir):
+            shutil.rmtree(mode_dir)
+        for image in images:
+            if int(os.path.basename(os.path.splitext(image)[0])[-4:]) in ANOMALY_INDICES:
+                save_dir = os.path.join(mode_dir, "anomaly")
+            else:
+                save_dir = os.path.join(mode_dir, "normal")
+
+            os.makedirs(save_dir, exist_ok=True)
+            shutil.copyfile(os.path.join(IMAGES_DIR, image), os.path.join(save_dir, image))
+
+
 def create_csv():
     """
     Creates a CSV file containing image filenames and corresponding labels.
@@ -99,12 +134,13 @@ def create_csv():
 
 if __name__ == '__main__':
     video_url = "https://repository.detectionnow.com/content/rgb/denim_elastane.mp4"
-    file_name = os.path.basename(video_url)
-    file_local_path = os.path.join(RAW_DIR, file_name)
+    video_file = os.path.basename(video_url)
+    video_local_path = os.path.join(RAW_DIR, video_file)
 
     os.makedirs(RAW_DIR, exist_ok=True)
     os.makedirs(IMAGES_DIR, exist_ok=True)
 
-    download_data(url=video_url, save_path=file_local_path)
-    extract_images(video_path=file_local_path)
+    download_data(url=video_url, save_path=video_local_path)
+    extract_images(video_path=video_local_path)
     create_csv()
+    split_train_val_test(0.2, 0.2)

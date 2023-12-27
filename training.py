@@ -6,7 +6,7 @@ import pandas as pd
 
 from config import BATCH_SIZE, LEARNING_RATE, EPOCHS
 from model import get_model
-from dataset import get_dataset
+from datasets import get_dataset
 
 
 def model_training(model_dir):
@@ -31,7 +31,8 @@ def model_training(model_dir):
 
         training_model = get_model()
         training_model.compile(optimizer=keras.optimizers.Adam(learning_rate=LEARNING_RATE),
-                               loss=keras.losses.CategoricalFocalCrossentropy(), metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
+                               loss=keras.losses.CategoricalFocalCrossentropy(),
+                               metrics=[keras.metrics.Precision(), keras.metrics.Recall()])
 
     os.makedirs(os.path.join(model_dir), exist_ok=True)
     with open(os.path.join(model_dir, 'summary.txt'), 'w') as f:
@@ -43,17 +44,17 @@ def model_training(model_dir):
                                           callbacks=[
                                               keras.callbacks.EarlyStopping(patience=20,
                                                                             restore_best_weights=True,
-                                                                            verbose=1),
+                                                                            verbose=0),
                                               keras.callbacks.ReduceLROnPlateau(patience=10,
                                                                                 cooldown=5,
-                                                                                verbose=1),
+                                                                                verbose=0),
                                               keras.callbacks.ModelCheckpoint(
                                                   filepath=os.path.join(model_dir, "model.keras"),
                                                   save_best_only=True,
-                                                  verbose=1),
+                                                  verbose=0),
                                               keras.callbacks.BackupAndRestore(os.path.join(model_dir, "backup"),
                                                                                delete_checkpoint=False)],
-                                          verbose=1)
+                                          verbose=0)
 
     if len(training_history.history["loss"]) > 0:
         pd.DataFrame.from_dict(training_history.history).to_csv(os.path.join(model_dir, "history.csv"), index=False)
