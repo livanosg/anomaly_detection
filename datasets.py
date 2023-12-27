@@ -58,27 +58,3 @@ def split_inputs_labels(ds):
     x_input = ds.map(lambda images, _: images, num_parallel_calls=tf.data.AUTOTUNE)
     y_true = ds.map(lambda _, labels: labels, num_parallel_calls=tf.data.AUTOTUNE)
     return x_input, y_true
-
-
-def get_dataset_predictions(model, dataset, get_labels=True, batch_size=32):
-    """
-    Retrieves predictions from a model for a given dataset.
-
-    Args:
-        model (tf.keras.Model): The trained model.
-        dataset (str): The dataset type ("train", "validation", "test").
-        get_labels (bool): Whether to include labels in the dataset.
-        batch_size (int): Batch size for loading images.
-
-    Returns:
-        Tuple[tf.data.Dataset, np.ndarray, Optional[tf.data.Dataset]]:
-        Input images, model predictions, and true labels (if specified).
-    """
-    ds = get_dataset(dataset=dataset, get_labels=get_labels, batch_size=batch_size)
-    if get_labels:
-        x_input, y_true = split_inputs_labels(ds)
-    else:
-        x_input = ds
-        y_true = None
-    y_output = model.predict(x_input)
-    return x_input, y_output, y_true
