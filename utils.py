@@ -5,7 +5,7 @@ import cv2
 import keras.models
 import numpy as np
 
-from config import TRIALS_DIR, INPUT_SHAPE, IMAGES_DIR
+from config import TRIALS_DIR, INPUT_SHAPE, IMAGES_DIR, TEST_DIR
 
 
 def get_latest_trial_id():
@@ -32,8 +32,9 @@ def inspect_data(model, threshold=0.5):
         This function displays images interactively and accepts user input for inspection.
     """
     paused = False
-    # anomaly_dir = os.path.join(TEST_DIR, "anomaly")
-    images_list = sorted(os.listdir(IMAGES_DIR))
+    anomaly_dir = os.path.join(TEST_DIR, "anomaly")
+    images_list = sorted(os.listdir(anomaly_dir))
+    # images_list = sorted(os.listdir(IMAGES_DIR))
     total_images = len(images_list)
     idx = 0
     while True:

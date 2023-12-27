@@ -13,10 +13,10 @@ from model import calculate_threshold
 
 if __name__ == '__main__':
 
-    # trial_id = "latest"
-    # mode = "test"
-    trial_id = None
-    mode = "train"
+    trial_id = "latest"
+    mode = "test"
+    # trial_id = None
+    # mode = "train"
     if trial_id is None:
         trial_id = str(datetime.now().strftime("%Y%m%d%H%M%S"))
     elif trial_id == "latest":
