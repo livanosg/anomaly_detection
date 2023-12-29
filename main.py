@@ -27,19 +27,19 @@ if __name__ == '__main__':
                                       image_shape=INPUT_SHAPE[:-1])
             val_dh = DatasetHandler("validation", batch_size=global_batch_size, get_labels=True,
                                     image_shape=INPUT_SHAPE[:-1])
-        with open(os.path.join(pr.metrics_dir, 'summary.txt'), 'w') as f:
-            mh.model.summary(print_fn=lambda x: f.write(x + '\n'))
-        metrics = [keras.metrics.Precision(), keras.metrics.Recall()]
-        callbacks = [EarlyStopping(patience=20, restore_best_weights=True),
-                     ReduceLROnPlateau(patience=10, cooldown=5),
-                     ModelCheckpoint(filepath=pr.model_path, save_best_only=True),
-                     BackupAndRestore(pr.backup_dir, delete_checkpoint=False),
-                     CSVLogger(os.path.join(pr.metrics_dir, "history.csv"), append=True)]
+            metrics = [keras.metrics.Precision(), keras.metrics.Recall()]
+            callbacks = [EarlyStopping(patience=20, restore_best_weights=True),
+                         ReduceLROnPlateau(patience=10, cooldown=5),
+                         ModelCheckpoint(filepath=pr.model_path, save_best_only=True),
+                         BackupAndRestore(pr.backup_dir, delete_checkpoint=False),
+                         CSVLogger(os.path.join(pr.metrics_dir, "history.csv"), append=True)]
+            with open(os.path.join(pr.metrics_dir, 'summary.txt'), 'w') as f:
+                mh.model.summary(print_fn=lambda x: f.write(x + '\n'))
 
-        optimizer = keras.optimizers.Adam(learning_rate=LEARNING_RATE)
-        loss = keras.losses.CategoricalFocalCrossentropy()
+            optimizer = keras.optimizers.Adam(learning_rate=LEARNING_RATE)
+            loss = keras.losses.CategoricalFocalCrossentropy()
 
-        mh.model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+            mh.model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
         history = mh.model.fit(x=train_dh.dataset, validation_data=val_dh.dataset, epochs=EPOCHS, callbacks=callbacks)
         mh.model.save(os.path.join(pr.model_dir, "model.keras"))
 

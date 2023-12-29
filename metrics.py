@@ -24,7 +24,7 @@ def plot_metrics(y_true, y_prob, threshold, history_df):
     axs[0, 0].set_ylim(0, 1.1)
     axs[0, 0].set_xlim(0, 1.1)
 
-    axs[0, 1].set_title('ROC curve')
+    axs[0, 1].set_title('Calibration curve')
     CalibrationDisplay.from_predictions(y_true=y_true, y_prob=y_prob, ax=axs[0, 1])
     axs[0, 1].legend(loc='lower right', fontsize=fontsize, shadow=True)
     axs[0, 1].set_ylim(0, 1.1)
@@ -48,12 +48,11 @@ def plot_metrics(y_true, y_prob, threshold, history_df):
     fig2, axs2 = plt.subplots(ncols=cols, nrows=rows, tight_layout=True, figsize=(10, 10))
     for metric, ax2 in zip(metrics, axs2.reshape(-1)):
         ax2.set_title(metric.capitalize())
-        ax2.plot(history_df["epoch"], metric, data=history_df)
+        ax2.plot(metric, data=history_df)
         if metric == "lr":
             ax2.legend(loc='upper right', fontsize=fontsize, shadow=True)
             ax2.set_ylim(history_df[metric].min() * 0.1, history_df[metric].max() * 10)
             ax2.set_yscale("log")
-
         elif metric != "loss":
             ax2.set_ylim(0, 1)
         if "val_" + metric in history_df.columns:
