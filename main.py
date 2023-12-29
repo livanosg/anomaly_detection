@@ -13,8 +13,8 @@ from datasets import DatasetHandler
 from model import calculate_threshold, ModelHandler
 
 if __name__ == '__main__':
-    pr = Project(trial_id="latest")
-    mode = "validation"
+    pr = Project()
+    mode = "train"
     if mode == "train":
         if tf.config.list_physical_devices('GPU'):
             strategy = tf.distribute.MirroredStrategy()
@@ -27,19 +27,17 @@ if __name__ == '__main__':
                                       image_shape=INPUT_SHAPE[:-1])
             val_dh = DatasetHandler("validation", batch_size=global_batch_size, get_labels=True,
                                     image_shape=INPUT_SHAPE[:-1])
-        with open(os.path.join(pr.metrics_dir, 'summary.txt'), 'w') as f:
-            mh.model.summary(print_fn=lambda x: f.write(x + '\n'))
-        metrics = [keras.metrics.Precision(), keras.metrics.Recall()]
-        callbacks = [EarlyStopping(patience=20, restore_best_weights=True),
-                     ReduceLROnPlateau(patience=10, cooldown=5),
-                     ModelCheckpoint(filepath=pr.model_path, save_best_only=True),
-                     BackupAndRestore(pr.backup_dir, delete_checkpoint=False),
-                     CSVLogger(os.path.join(pr.metrics_dir, "history.csv"), append=True)]
-
-        optimizer = keras.optimizers.Adam(learning_rate=LEARNING_RATE)
-        loss = keras.losses.CategoricalFocalCrossentropy()
-
-        mh.model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+            metrics = [keras.metrics.Precision(), keras.metrics.Recall()]
+            optimizer = keras.optimizers.Adam(learning_rate=LEARNING_RATE)
+            loss = keras.losses.CategoricalFocalCrossentropy()
+            callbacks = [EarlyStopping(patience=20, restore_best_weights=True),
+                         ReduceLROnPlateau(patience=10, cooldown=5),
+                         ModelCheckpoint(filepath=pr.model_path, save_best_only=True),
+                         BackupAndRestore(pr.backup_dir, delete_checkpoint=False),
+                         CSVLogger(os.path.join(pr.metrics_dir, "history.csv"), append=True)]
+            with open(os.path.join(pr.metrics_dir, 'summary.txt'), 'w') as f:
+                mh.model.summary(print_fn=lambda x: f.write(x + '\n'))
+            mh.model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
         history = mh.model.fit(x=train_dh.dataset, validation_data=val_dh.dataset, epochs=EPOCHS, callbacks=callbacks)
         mh.model.save(os.path.join(pr.model_dir, "model.keras"))
 
@@ -69,7 +67,7 @@ if __name__ == '__main__':
         x_input, y_true = test_dh.split_inputs_labels()
         y_true = np.concatenate(list(y_true.as_numpy_iterator()))
         y_prob = model.predict(x_input).squeeze()
-        plot_metrics(y_true, y_prob, threshold, history_df)
+        plot_metrics(y_true[:, 1], y_prob[:, 1], threshold, history_df)
     elif mode == "predict":
         model = keras.models.load_model(pr.model_path)
         threshold = np.load(os.path.join(pr.metrics_dir, "threshold.npy"))
