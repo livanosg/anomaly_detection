@@ -1,12 +1,11 @@
 import os
-import time
 from datetime import datetime
 
 import cv2
 import keras.models
 import numpy as np
 
-from config import TRIALS_DIR, INPUT_SHAPE, IMAGES_DIR, TEST_DIR, RAW_DIR
+from config import TRIALS_DIR, INPUT_SHAPE, IMAGES_DIR
 
 
 def get_latest_trial_id():
