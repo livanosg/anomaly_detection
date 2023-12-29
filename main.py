@@ -13,8 +13,8 @@ from datasets import DatasetHandler
 from model import calculate_threshold, ModelHandler
 
 if __name__ == '__main__':
-    pr = Project(trial_id="latest")
-    mode = "validation"
+    pr = Project()
+    mode = "train"
     if mode == "train":
         if tf.config.list_physical_devices('GPU'):
             strategy = tf.distribute.MirroredStrategy()
@@ -69,7 +69,7 @@ if __name__ == '__main__':
         x_input, y_true = test_dh.split_inputs_labels()
         y_true = np.concatenate(list(y_true.as_numpy_iterator()))
         y_prob = model.predict(x_input).squeeze()
-        plot_metrics(y_true, y_prob, threshold, history_df)
+        plot_metrics(y_true[:, 1], y_prob[:, 1], threshold, history_df)
     elif mode == "predict":
         model = keras.models.load_model(pr.model_path)
         threshold = np.load(os.path.join(pr.metrics_dir, "threshold.npy"))
