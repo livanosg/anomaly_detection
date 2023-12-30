@@ -1,6 +1,5 @@
 import itertools
 import os
-from datetime import datetime
 
 URL_DATA_FILE = "https://repository.detectionnow.com/content/rgb/denim_elastane.mp4"
 FILE_NAME = os.path.basename(URL_DATA_FILE)

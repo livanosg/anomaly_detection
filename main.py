@@ -12,9 +12,7 @@ from metrics import plot_metrics, plot_training_summary
 
 if __name__ == '__main__':
     conf = fire.Fire(Config)
-    # Config(unsupervised=False)
     if conf.mode == "train":
-
         if conf.method == "supervised":
             get_labels = True
         else:

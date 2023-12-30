@@ -54,4 +54,3 @@ def calculate_threshold(model, dataset, conf):
         threshold = np.mean(loss) + np.std(loss)
 
     np.save(conf.threshold_path, threshold)
-
