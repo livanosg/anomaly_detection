@@ -143,4 +143,4 @@ if __name__ == '__main__':
     download_data(url=video_url, save_path=video_local_path)
     extract_images(video_path=video_local_path)
     create_csv()
-    split_train_val_test(0.2, 0.2)
+    split_train_val_test(0.1, 0.1)

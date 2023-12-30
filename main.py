@@ -1,78 +1,58 @@
 import os
-
-import keras.models
+import fire
 import numpy as np
+import keras.models
 import pandas as pd
-import tensorflow as tf
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint, BackupAndRestore, CSVLogger
 
-from config import BATCH_SIZE, INPUT_SHAPE, LEARNING_RATE, EPOCHS
-from metrics import plot_metrics
-from project_manage import Project
-from datasets import DatasetHandler
-from model import calculate_threshold, ModelHandler
+from project_manage import Config
+from training import training_pipeline
+from model import supervised_anomaly_detector, unsupervised_anomaly_detector
+from datasets import get_dataset, split_inputs_labels
+from metrics import plot_metrics, plot_training_summary
 
 if __name__ == '__main__':
-    pr = Project()
-    mode = "train"
-    if mode == "train":
-        if tf.config.list_physical_devices('GPU'):
-            strategy = tf.distribute.MirroredStrategy()
+    conf = fire.Fire(Config)
+    # Config(unsupervised=False)
+    if conf.mode == "train":
+
+        if conf.method == "supervised":
+            get_labels = True
         else:
-            strategy = tf.distribute.get_strategy()
-        global_batch_size = BATCH_SIZE * strategy.num_replicas_in_sync
-        with strategy.scope():
-            mh = ModelHandler(input_shape=INPUT_SHAPE)
-            train_dh = DatasetHandler("train", batch_size=global_batch_size, get_labels=True,
-                                      image_shape=INPUT_SHAPE[:-1])
-            val_dh = DatasetHandler("validation", batch_size=global_batch_size, get_labels=True,
-                                    image_shape=INPUT_SHAPE[:-1])
-            metrics = [keras.metrics.Precision(), keras.metrics.Recall()]
-            optimizer = keras.optimizers.Adam(learning_rate=LEARNING_RATE)
-            loss = keras.losses.CategoricalFocalCrossentropy()
-            callbacks = [EarlyStopping(patience=20, restore_best_weights=True),
-                         ReduceLROnPlateau(patience=10, cooldown=5),
-                         ModelCheckpoint(filepath=pr.model_path, save_best_only=True),
-                         BackupAndRestore(pr.backup_dir, delete_checkpoint=False),
-                         CSVLogger(os.path.join(pr.metrics_dir, "history.csv"), append=True)]
-            with open(os.path.join(pr.metrics_dir, 'summary.txt'), 'w') as f:
-                mh.model.summary(print_fn=lambda x: f.write(x + '\n'))
-            mh.model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
-        history = mh.model.fit(x=train_dh.dataset, validation_data=val_dh.dataset, epochs=EPOCHS, callbacks=callbacks)
-        mh.model.save(os.path.join(pr.model_dir, "model.keras"))
+            get_labels = False
+        train_ds = get_dataset(directory=conf.train_dir, conf=conf, shuffle=True, get_labels=get_labels)
+        val_ds = get_dataset(directory=conf.val_dir, conf=conf, shuffle=True, get_labels=get_labels)
 
-        x_input, y_true = val_dh.split_inputs_labels()
-        y_true = np.concatenate(list(y_true.as_numpy_iterator()))
-        y_prob = mh.model.predict(x_input).squeeze()
+        with conf.strategy.scope():
+            if conf.method == "supervised":
+                model = supervised_anomaly_detector(conf=conf)
+            else:
+                model = unsupervised_anomaly_detector(conf=conf)
+            with open(conf.summary_path, 'w') as f:
+                model.build(input_shape=[None] + conf.input_shape)
+                model.summary(print_fn=lambda x: f.write(x + '\n'))
+        history = training_pipeline(model=model, train_data=train_ds, val_data=val_ds, conf=conf)
+        plot_training_summary(pd.read_csv(conf.history_path))
+    y_true = np.load(conf.y_true)
+    y_prob = np.load(conf.y_prob)
+    threshold = np.load(conf.threshold_path)
 
-        threshold = calculate_threshold(y_true[:, 1], y_prob[:, 1])
-
-        np.save(os.path.join(pr.model_dir, "threshold.npy"), threshold)
-        np.save(os.path.join(pr.metrics_dir, "y_true.npy"), y_true)
-        np.save(os.path.join(pr.metrics_dir, "y_prob.npy"), y_prob)
-    if mode in ("train", "validation"):
-        model = keras.models.load_model(os.path.join(pr.model_dir, "model.keras"))
-        threshold = np.load(os.path.join(pr.model_dir, "threshold.npy"))
-        history_df = pd.read_csv(os.path.join(pr.metrics_dir, "history.csv"))
-        y_true = np.load(os.path.join(pr.metrics_dir, "y_true.npy"))
-        y_prob = np.load(os.path.join(pr.metrics_dir, "y_prob.npy"))
-
-        plot_metrics(y_true[:, 1], y_prob[:, 1], threshold, history_df=history_df)
-
-    if mode in ("train", "test"):
-        model = keras.models.load_model(os.path.join(pr.model_dir, "model.keras"))
-        threshold = np.load(os.path.join(pr.model_dir, "threshold.npy"))
-        history_df = pd.read_csv(os.path.join(pr.metrics_dir, "history.csv"))
-        test_dh = DatasetHandler("test", batch_size=100, get_labels=True, image_shape=INPUT_SHAPE[:-1])
-        x_input, y_true = test_dh.split_inputs_labels()
+    if conf.mode in ("train", "validation"):
+        plot_metrics(title="Validation", y_true=y_true, y_prob=y_prob, threshold=threshold)
+    model = keras.models.load_model(conf.model_path)
+    if conf.mode in ("train", "test"):
+        test_ds = get_dataset(directory=conf.test_dir, conf=conf, shuffle=False)
+        x_input, y_true = split_inputs_labels(test_ds)
         y_true = np.concatenate(list(y_true.as_numpy_iterator()))
         y_prob = model.predict(x_input).squeeze()
-        plot_metrics(y_true[:, 1], y_prob[:, 1], threshold, history_df)
-    elif mode == "predict":
-        model = keras.models.load_model(pr.model_path)
-        threshold = np.load(os.path.join(pr.metrics_dir, "threshold.npy"))
-        test_dh = DatasetHandler("test", batch_size=200, get_labels=False, image_shape=INPUT_SHAPE[:-1])
-        y_pred_prob = model.predict(test_dh.dataset).squeeze()
-        y_pred_prob = y_pred_prob[:, 1]
-        y_pred = np.greater_equal(y_pred_prob, threshold).squeeze().astype(int)
-        print(y_pred)
+        plot_metrics(title="Test", y_true=y_true, y_prob=y_prob, threshold=threshold)
+    if conf.mode == "predict":
+        threshold = np.load(os.path.join(conf.model_dir, "threshold.npy"))
+        test_ds = get_dataset(directory=conf.test_dir, shuffle=False, conf=conf)
+        y_pred_prob = model.predict(test_ds).squeeze()
+        if conf.method == "supervised":
+            y_pred = np.greater_equal(y_pred_prob, threshold).squeeze().astype(int)
+            map(lambda x: print("Anomaly" if x == 1 else "Not Anomaly"), y_pred)
+        if conf.method == "unsupervised":
+            y_pred = model.evaluate(y_pred_prob, test_ds)
+            map(lambda x: print("Anomaly" if x == 1 else "Not Anomaly"), y_pred)
+    exit(0)
