@@ -17,8 +17,9 @@ def training_pipeline(model, train_data, val_data, conf):
         loss = keras.losses.BinaryFocalCrossentropy()
     else:
         metrics = [keras.metrics.MeanSquaredError()]
-        callbacks += [ReduceLROnPlateau(patience=10, cooldown=5, monitor='loss', mode="min"),
-                      EarlyStopping(patience=20, restore_best_weights=True, monitor='loss', mode="min")]
+        callbacks += []
+        # ReduceLROnPlateau(patience=10, cooldown=5, monitor='loss', mode="min"),
+        #           EarlyStopping(patience=20, restore_best_weights=True, monitor='loss', mode="min")]
         loss = keras.losses.MeanSquaredError()
 
     model.compile(optimizer=optimizer, loss=loss, metrics=metrics)

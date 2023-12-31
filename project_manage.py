@@ -2,25 +2,27 @@ import os
 from datetime import datetime
 
 import tensorflow as tf
+from icecream import ic
 
 from config import TRIALS_DIR, DATA_DIR, CLASS_NAMES, INPUT_SHAPE, BATCH_SIZE, LEARNING_RATE, EPOCHS
 
 
 class Config:
+
     def __init__(self, trial_id=None, method="supervised", mode="train", class_names=CLASS_NAMES,
                  input_shape=INPUT_SHAPE,
                  batch_size=BATCH_SIZE, learning_rate=LEARNING_RATE, epochs=EPOCHS):
 
         self.method = method.lower()
         self.mode = mode.lower()
-
         if trial_id is None:
             self.trial_id = datetime.now().strftime("%Y%m%d%H%M%S")
         elif trial_id == "latest":
-            self.trial_id = sorted(os.path.join(TRIALS_DIR, self.method),
+            self.trial_id = sorted(os.listdir(os.path.join(TRIALS_DIR, self.method)),
                                    key=lambda x: datetime.strptime(x, "%Y%m%d%H%M%S"))[-1]
+
         else:
-            self.trial_id = trial_id
+            self.trial_id = str(trial_id)
         self.trial_dir = os.path.join(TRIALS_DIR, self.method, str(self.trial_id))
         self.model_dir = os.path.join(self.trial_dir, "model")
         self.metrics_dir = os.path.join(self.trial_dir, "metrics")
@@ -49,7 +51,7 @@ class Config:
         self.class_names = class_names
         if self.method == "unsupervised":
             self.train_dir = os.path.join(self.train_dir, "normal")
-            self.val_dir = os.path.join(self.val_dir, "normal")
+            # self.val_dir = os.path.join(self.val_dir, "normal")
             # self.test_dir = os.path.join(self.val_dir, "normal")
             self.class_names = []
 

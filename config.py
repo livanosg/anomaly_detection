@@ -20,10 +20,10 @@ ANOMALY_INDICES = list(itertools.chain(range(45, 538), range(799, 1266), range(1
                                        range(2495, 2931), range(2954, 3417), range(4092, 4817)))
 
 SEED = 1312
-BATCH_SIZE = 64
+BATCH_SIZE = 16
 IMG_HEIGHT = 180
 IMG_WIDTH = 180
 CHANNELS = 3
 INPUT_SHAPE = [IMG_HEIGHT, IMG_WIDTH, CHANNELS]
-EPOCHS = 200
+EPOCHS = 1000
 LEARNING_RATE = 1e-3

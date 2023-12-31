@@ -17,8 +17,6 @@ def get_dataset(directory, conf, shuffle=True, get_labels=True):
         dataset = dataset.map(lambda image, label: (image / 255., label), num_parallel_calls=tf.data.AUTOTUNE)
     else:
         dataset = dataset.map(lambda image: image / 255., num_parallel_calls=tf.data.AUTOTUNE)
-    if conf.method == "unsupervised":
-        dataset = tf.data.Dataset.zip((dataset, dataset))
     return dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
 
 

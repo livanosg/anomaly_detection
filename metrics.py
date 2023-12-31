@@ -1,22 +1,21 @@
 import numpy as np
 import matplotlib as mpl
+from icecream import ic
 from matplotlib import pyplot as plt
 from sklearn.calibration import CalibrationDisplay
 from sklearn.metrics import PrecisionRecallDisplay, ConfusionMatrixDisplay
 from config import CLASS_NAMES
 
 
-def plot_metrics(title, y_true, y_prob, threshold):
+def plot_metrics(title, y_true, y_prob, threshold, method):
     plt.style.use("ggplot")
     mpl.rcParams['figure.dpi'] = 200
     fontsize = 7
-
     fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
     fig.suptitle(title, fontsize=fontsize * 2)
-
     y_pred = np.greater_equal(y_prob, threshold).squeeze().astype(int)
-    class_0 = y_prob[y_true == 0]
-    class_1 = y_prob[y_true == 1]
+
+    # if method == "supervised":
     axs[0, 0].set_title('Precision Recall curve')
     PrecisionRecallDisplay.from_predictions(y_true=y_true, y_pred=y_prob, ax=axs[0, 0], plot_chance_level=True)
     axs[0, 0].legend(loc='lower left', fontsize=fontsize, shadow=True)
@@ -29,8 +28,11 @@ def plot_metrics(title, y_true, y_prob, threshold):
     axs[0, 1].set_ylim(0, 1.1)
     axs[0, 1].set_xlim(0, 1.1)
 
-    axs[1, 0].set_title('Probability distribution')
-    axs[1, 0].hist([class_0, class_1])
+    if method == "supervised":
+        axs[1, 0].set_title('Probability distribution')
+    else:
+        axs[1, 0].set_title('Loss distribution')
+    axs[1, 0].hist([y_prob[y_true == 0], y_prob[y_true == 1]])
     axs[1, 0].legend(CLASS_NAMES, loc='upper left', fontsize=fontsize, shadow=True)
     axs[1, 0].set_ylabel('N Samples')
     axs[1, 0].set_xlabel('Output probability')
