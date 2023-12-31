@@ -8,6 +8,7 @@ ROOT_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(ROOT_DIR, "data")
 RAW_DIR = os.path.join(DATA_DIR, "raw")
 TRIALS_DIR = os.path.join(ROOT_DIR, "trials")
+
 IMAGES_DIR = os.path.join(DATA_DIR, "images")
 TRAIN_DIR = os.path.join(DATA_DIR, "train")
 VALIDATION_DIR = os.path.join(DATA_DIR, "validation")
@@ -20,8 +21,8 @@ ANOMALY_INDICES = list(itertools.chain(range(45, 538), range(799, 1266), range(1
 
 SEED = 1312
 BATCH_SIZE = 16
-IMG_HEIGHT = 180
-IMG_WIDTH = 180
+IMG_HEIGHT = 224
+IMG_WIDTH = 224
 CHANNELS = 3
 INPUT_SHAPE = [IMG_HEIGHT, IMG_WIDTH, CHANNELS]
 EPOCHS = 1000
