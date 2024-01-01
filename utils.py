@@ -2,10 +2,9 @@ import os
 from datetime import datetime
 
 import cv2
-import keras.models
 import numpy as np
 
-from config import TRIALS_DIR, INPUT_SHAPE, IMAGES_DIR
+from config import TRIALS_DIR
 
 
 def get_latest_trial_id():
@@ -20,7 +19,7 @@ def get_latest_trial_id():
     return latest_trial_id
 
 
-def inspect_data(trial_id):
+def inspect_data(dataset, model, threshold, conf):
     """
     Allows interactive inspection of images, either with or without a trained model.
 
@@ -28,74 +27,46 @@ def inspect_data(trial_id):
         This function displays images interactively and accepts user input for inspection.
     """
     paused = False
-    # anomaly_dir = os.path.join(TEST_DIR, "anomaly")
-    # images_list = sorted(os.listdir(anomaly_dir))
-    if trial_id:
-        model_dir = os.path.join(TRIALS_DIR, str(trial_id), "model")
-        model = keras.models.load_model(os.path.join(model_dir, "model.keras"))
-        threshold = np.load(os.path.join(model_dir, "threshold.npy"))
-    images_list = sorted(os.listdir(IMAGES_DIR))
-
     window_name = "Inspection tool"
     cv2.namedWindow(window_name, cv2.WINDOW_KEEPRATIO)
 
-    idx = 0
-    while idx < len(images_list) - 1:
-        image = cv2.imread(os.path.join(IMAGES_DIR, images_list[idx]))
-        # todo color_code train and test set images
+    for input_image, label in dataset.unbatch().batch(1):
         window_title = " ".join([window_name, "(Paused)" if paused else len("(Paused)") * " "])
+        y_prob = None
+        y_pred = None
+        text = ""
+        if conf.method == "supervised":
+            text = "Probability"
+            y_prob = model.predict(input_image, verbose=0).squeeze()
 
-        if trial_id:
-            input_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            input_image = cv2.resize(input_image, dsize=INPUT_SHAPE[:-1])
-            input_image = input_image / 225.
-            y_pred_prob = model.predict(np.expand_dims(input_image, axis=0), verbose=0)
-            y_pred_prob = y_pred_prob[:, 1]
-            y_pred = np.greater_equal(y_pred_prob, threshold).astype(int)
+            y_pred = np.greater_equal(y_prob, threshold).astype(int)
+        elif conf.method == "unsupervised":
+            text = "Reconstruction loss"
+            recon_error = model.evaluate(input_image, input_image, verbose=0).squeeze()
+            y_prob = recon_error
+            y_pred = np.greater_equal(y_prob, threshold).astype(int)
 
-            window_title = " ".join([window_title,
-                                     f"Threshold: {round(float(threshold), 2)}",
-                                     f"Probability: {round(float(y_pred_prob[0]), 2)}"])
+        window_title = " ".join([window_title,
+                                 f"Threshold: {np.round(threshold, 2)}",
+                                 f"{text}: {y_prob}",
+                                 f"Precidtion: {np.round(y_pred, 2)}"])
 
-            cv2.putText(image, "Anomaly", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            cv2.rectangle(image,
-                          pt1=(int(image.shape[1] * 0.02),
-                               int(image.shape[0] * 0.2) - int(image.shape[0] * 0.15 * y_pred_prob[0])),
-                          pt2=(int(image.shape[1] * 0.05),
-                               int(image.shape[0] * 0.2)),
-                          color=(0, 0, int(128 * 0.7 + 127 * y_pred_prob[0])),
-                          thickness=-1)
-            cv2.putText(image, "Normal", (150, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.rectangle(image,
-                          pt1=(int(image.shape[1] * 0.09),
-                               int(image.shape[0] * 0.2) - int(image.shape[0] * 0.15 * (1 - y_pred_prob[0]))),
-                          pt2=(int(image.shape[1] * 0.12),
-                               int(image.shape[0] * 0.2)),
-                          color=(0, int(128 * 0.7 + 127 * (1 - y_pred_prob[0])), 0),
-                          thickness=-1)
+        if y_pred == 1:
+            color = (0, 0, 255)
+        elif y_pred == 0:
+            color = (0, 255, 0)
         else:
-            cv2.putText(image, "Inspection", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+            color = (255, 0, 0)
+
+        image = input_image.numpy().squeeze() * 255
+        image = np.round(image, 0).astype(np.uint8)
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        cv2.putText(img=image, text=conf.class_names[y_pred].capitalize(), org=(150, 30), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=color, thickness=2)
         cv2.setWindowTitle(window_name, window_title)
         cv2.imshow(window_name, image)
         key = cv2.waitKey(10)
-        if key == ord('p'):  # Pause
-            paused = not paused
-        elif key == ord('b'):  # Go back 10 frames
-            idx = max(0, idx - 10)
-        elif key == ord('v'):  # Go back 1 frame
-            idx = max(0, idx - 1)
-        elif key == ord('f'):  # Skip 10 frames
-            idx += 10
-        elif key == ord('d'):  # Skip 1 frame
-            idx += 1
-        elif key == ord('q'):  # Quit
+        if key == ord('q'):  # Quit
             break
-        if not paused:
-            idx += 1
+        if key == ord('p'):  # Pause
+            cv2.waitKey(0)
     cv2.destroyAllWindows()
-
-
-if __name__ == '__main__':
-    trial_id = get_latest_trial_id()
-    # # trial_id = "20231227113941"
-    inspect_data(trial_id=trial_id)

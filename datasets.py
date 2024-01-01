@@ -3,7 +3,7 @@ import tensorflow as tf
 from config import SEED, TRAIN_DIR, VALIDATION_DIR, TEST_DIR, IMAGES_DIR
 
 
-def get_dataset(mode, shuffle, **kwargs):
+def get_dataset(mode, shuffle, conf):
     datasets = {"train": TRAIN_DIR,
                 "validation": VALIDATION_DIR,
                 "test": TEST_DIR,
@@ -12,9 +12,9 @@ def get_dataset(mode, shuffle, **kwargs):
     dataset = keras.utils.image_dataset_from_directory(directory=datasets[mode],
                                                        labels="inferred",
                                                        label_mode="int",
-                                                       class_names=kwargs["class_names"],
-                                                       image_size=kwargs["image_size"],
-                                                       batch_size=kwargs["batch_size"],
+                                                       class_names=conf.class_names,
+                                                       image_size=conf.input_shape[:-1],
+                                                       batch_size=conf.batch_size,
                                                        shuffle=shuffle,
                                                        seed=SEED)
 

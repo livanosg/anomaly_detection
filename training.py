@@ -1,34 +1,113 @@
 import os
 
-import keras
-from keras.src.callbacks import ReduceLROnPlateau, ModelCheckpoint, BackupAndRestore, CSVLogger, EarlyStopping
+import numpy as np
+import tensorflow as tf
+from icecream import ic
+from keras.optimizers import Adam
+from keras.losses import BinaryFocalCrossentropy, MeanAbsoluteError
+from keras.metrics import Precision, Recall, MeanSquaredError
+from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, BackupAndRestore, CSVLogger, EarlyStopping
 
-from metrics import plot_training_history
-from model import calculate_threshold
+from datasets import split_inputs_labels
+from model import supervised_anomaly_detector, unsupervised_anomaly_detector, pr_threshold
+from metrics import plot_metrics
 
 
-def training_pipeline(model, train_data, val_data, **kwargs):
-    callbacks = [ModelCheckpoint(filepath=os.path.join(kwargs["model_dir"], "model.keras"), save_best_only=True),
-                 BackupAndRestore(os.path.join(kwargs["model_dir"], "backup"), delete_checkpoint=False),
-                 CSVLogger(os.path.join(kwargs["model_dir"], "history.csv"), append=True)]
+def supervised_training(train_ds, val_ds, conf):
+    train_input, train_label = split_inputs_labels(train_ds)
+    train_label = np.concatenate(list(train_label.as_numpy_iterator()))
 
-    if kwargs["method"] == "supervised":
-        metrics = [keras.metrics.Precision(), keras.metrics.Recall()]
-        callbacks += [ReduceLROnPlateau(patience=10, cooldown=5, monitor='val_loss', mode="min"),
-                      EarlyStopping(patience=20, restore_best_weights=True, monitor='val_loss', mode="min")]
-        loss = keras.losses.BinaryFocalCrossentropy()
-    else:
-        metrics = [keras.metrics.MeanSquaredError()]
-        callbacks += [
-            # ReduceLROnPlateau(patience=10, cooldown=5, monitor='loss', mode="min"),
-            EarlyStopping(patience=20, restore_best_weights=True, monitor='loss', mode="min")]
-        loss = keras.losses.MeanSquaredError()
-    optimizer = keras.optimizers.Adam(learning_rate=kwargs["learning_rate"])
-    model.compile(optimizer=optimizer, loss=loss, metrics=metrics, jit_compile=False)
-    with open(os.path.join(kwargs["model_dir"], "summary"), 'w') as f:
+    model = supervised_anomaly_detector(input_shape=conf.input_shape)
+
+    metrics = [Precision(), Recall()]
+    callbacks = [ModelCheckpoint(filepath=os.path.join(conf.model_dir, "model.keras"), save_best_only=True),
+                 BackupAndRestore(os.path.join(conf.model_dir, "backup"), delete_checkpoint=False),
+                 CSVLogger(os.path.join(conf.model_dir, "history.csv"), append=True),
+                 ReduceLROnPlateau(factor=0.5, patience=10, cooldown=5),
+                 EarlyStopping(patience=20, restore_best_weights=True)]
+
+    loss = BinaryFocalCrossentropy()
+    optimizer = Adam(learning_rate=conf.learning_rate)
+    with open(os.path.join(conf.model_dir, "summary.txt"), 'w') as f:
         model.summary(print_fn=lambda x: f.write(x + '\n'))
-    history = model.fit(x=train_data, validation_data=val_data, epochs=kwargs["epochs"], callbacks=callbacks)
-    calculate_threshold(model, train_data, **kwargs)
-    plot_training_history(history.history)
+    model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+    model.fit(x=train_ds, validation_data=val_ds, epochs=conf.epochs, callbacks=callbacks)
 
-    return history
+    train_probability = model.predict(train_input).squeeze()
+    threshold = pr_threshold(y_true=train_label, probas_pred=train_probability, conf=conf, save=True)
+    ic(threshold)
+    ic(threshold.shape)
+    ic(threshold.dtype)
+
+    return model, threshold
+
+
+def unsupervised_training(train_ds, val_ds, conf):
+    train_normal = train_ds.unbatch().filter(lambda image, label: tf.math.equal(label, [0])[0])
+    train_normal = train_normal.batch(conf.batch_size)
+    train_normal_input, train_normal_label = split_inputs_labels(train_normal)
+
+    train_normal_data = tf.data.Dataset.zip(train_normal_input, train_normal_input).prefetch(
+        buffer_size=tf.data.AUTOTUNE)
+    train_normal_data = train_normal_data
+
+    val_input, val_label = split_inputs_labels(val_ds)
+    val_data = tf.data.Dataset.zip(val_input, val_input)
+
+    model = unsupervised_anomaly_detector(input_shape=conf.input_shape)
+
+    metrics = [MeanSquaredError()]
+    callbacks = [ModelCheckpoint(filepath=os.path.join(conf.model_dir, "model.keras"), save_best_only=True),
+                 BackupAndRestore(os.path.join(conf.model_dir, "backup"), delete_checkpoint=False),
+                 CSVLogger(os.path.join(conf.model_dir, "history.csv"), append=True),
+                 ReduceLROnPlateau(patience=10, cooldown=5, monitor='loss', mode="min"),
+                 EarlyStopping(patience=30, restore_best_weights=True, monitor='loss', mode="min")]
+
+    loss = MeanAbsoluteError()
+    optimizer = Adam(learning_rate=conf.learning_rate)
+    with open(os.path.join(conf.model_dir, "summary"), 'w') as f:
+        model.summary(print_fn=lambda x: f.write(x + '\n'))
+    model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+    model.fit(x=train_normal_data, validation_data=val_data, epochs=conf.epochs, callbacks=callbacks)
+
+    train_reconstruction_errors = []
+    for train_input, _ in train_ds:
+        train_reconstruction_errors.append(reconstruction_error(inpt=train_input, model=model))
+
+    train_reconstruction_errors = np.concatenate(train_reconstruction_errors)
+    ic(train_reconstruction_errors)
+    ic(train_reconstruction_errors.mean())
+    ic(train_reconstruction_errors.std())
+
+    threshold = train_reconstruction_errors.mean() + train_reconstruction_errors.std()
+    ic(threshold)
+    ic(threshold.shape)
+    ic(threshold.dtype)
+    # if save:
+    np.save(os.path.join(conf.model_dir, "threshold.npy"), threshold)
+
+    return model, threshold
+
+
+def validate_supervised_model(title, dataset, model, threshold, conf, save=False):
+    inpts, labels = split_inputs_labels(dataset)
+    labels = np.concatenate(list(labels.as_numpy_iterator()))
+    probas = model.predict(inpts).squeeze()
+    preds = np.greater_equal(probas, threshold).astype(int)
+    plot_metrics(title=title, y_true=labels, y_prob=probas, y_pred=preds, conf=conf, save=save)
+
+
+def validate_unsupervised_model(title, dataset, model, threshold, conf, save=False):
+    labels = []
+    rec_errors = []
+    for inpt, label in dataset:
+        rec_errors.append(reconstruction_error(inpt, model))
+        labels.append(label)
+    rec_errors = np.concatenate(rec_errors)
+    labels = np.concatenate(labels)
+    preds = np.greater_equal(rec_errors, threshold).astype(int)
+    plot_metrics(title=title, y_true=labels, y_prob=rec_errors, y_pred=preds, conf=conf, save=save)
+
+
+def reconstruction_error(inpt, model):
+    return np.mean(np.absolute(inpt.numpy() - model.predict(inpt, verbose=0)), axis=(1, 2, 3))
