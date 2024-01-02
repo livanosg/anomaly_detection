@@ -16,12 +16,9 @@ VALIDATION_DIR = os.path.join(DATA_DIR, "validation")
 TEST_DIR = os.path.join(DATA_DIR, "test")
 
 CLASS_NAMES = ["normal", "anomaly"]
-ANOMALY_INDICES = list(itertools.chain(range(45, 538),
-                                       range(799, 1266),
-                                       range(1452, 2311),
-                                       range(2495, 2931),
-                                       range(2954, 3417),
-                                       range(4092, 4817)))
+ANOMALIES = [range(45, 538), range(799, 1266), range(1452, 2311),
+             range(2495, 2931), range(2954, 3417), range(4092, 4817)]
+ANOMALIES_INDICES = list(itertools.chain(*ANOMALIES))
 
 SEED = 2
 MODE = "train"

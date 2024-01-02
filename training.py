@@ -21,8 +21,8 @@ def supervised_training(train_ds, val_ds, conf):
 
     metrics = [Precision(), Recall()]
     callbacks = [ModelCheckpoint(filepath=os.path.join(conf.model_dir, "model.keras"), save_best_only=True),
-                 BackupAndRestore(os.path.join(conf.model_dir, "backup"), delete_checkpoint=False),
-                 CSVLogger(os.path.join(conf.model_dir, "history.csv"), append=True),
+                 BackupAndRestore(backup_dir=os.path.join(conf.model_dir, "backup"), delete_checkpoint=False),
+                 CSVLogger(filename=os.path.join(conf.model_dir, "history.csv"), append=True),
                  ReduceLROnPlateau(factor=0.5, patience=10, cooldown=5),
                  EarlyStopping(patience=20, restore_best_weights=True)]
 

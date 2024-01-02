@@ -1,3 +1,4 @@
+import itertools
 import os
 import shutil
 import sys
@@ -6,11 +7,10 @@ from multiprocessing import Process
 import cv2
 import pandas as pd
 import requests
-from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-from config import RAW_DIR, IMAGES_DIR, ANOMALY_INDICES, TRAIN_DIR, VALIDATION_DIR, CLASS_NAMES, SEED, VIDEO_URL, \
-    VIDEO_FILE
+from config import RAW_DIR, VIDEO_URL, VIDEO_FILE, IMAGES_DIR, TRAIN_DIR, VALIDATION_DIR, CLASS_NAMES, \
+                    ANOMALIES, ANOMALIES_INDICES
 
 
 def download_data(url, save_path):
@@ -28,7 +28,7 @@ def download_data(url, save_path):
     if os.path.isfile(save_path):
         if remote_file_size == os.stat(save_path).st_size:
             print(f"File {file_name} is already downloaded!")
-            return
+            return None
         print(f"File {file_name} is not fully downloaded...")
     print(f"Downloading...")
     with open(save_path, "wb") as handle:
@@ -63,10 +63,10 @@ def extract_images(video_path, dataset_dir):
         if not ret:
             break
         image_name = image_base_name + formatted_index + ".png"
-        save_path = os.path.join(dataset_dir, CLASS_NAMES[int(frame_index in ANOMALY_INDICES)], image_name)
+        save_path = os.path.join(dataset_dir, CLASS_NAMES[int(frame_index in ANOMALIES_INDICES)], image_name)
         process = Process(target=cv2.imwrite, args=(save_path, frame))
-        processes.append(process)
         process.start()
+        processes.append(process)
     for process in processes:
         process.join()
 
@@ -79,7 +79,7 @@ def _get_index(image_path):
 
 
 def _get_label(image_path):
-    return int(_get_index(image_path) in ANOMALY_INDICES)
+    return int(_get_index(image_path) in ANOMALIES_INDICES)
 
 
 def create_csv(dataset_dir):
@@ -97,7 +97,7 @@ def create_csv(dataset_dir):
     data.to_csv(os.path.join(dataset_dir, f"{os.path.basename(dataset_dir)}_data.csv"), index=False)
 
 
-def split_train_val_test(val_size=0.2):
+def split_train_val(val_size=0.2):
     """
     Splits the dataset into training, validation, and test sets based on specified sizes.
 
@@ -105,18 +105,15 @@ def split_train_val_test(val_size=0.2):
         val_size (float): Fraction of the dataset to use for validation.
     """
     df = pd.read_csv(os.path.join(IMAGES_DIR, f"{os.path.basename(IMAGES_DIR)}_data.csv"))
-    images = df["images"].values
-    labels = df["labels"].values
-    x_train, x_val, y_train, y_val = train_test_split(images, labels,
-                                                      test_size=val_size,
-                                                      stratify=labels,
-                                                      random_state=SEED)
-
-    for data_dir, images in [[TRAIN_DIR, x_train], [VALIDATION_DIR, x_val]]:
+    train_data = ANOMALIES[:int(len(ANOMALIES) * (1 - val_size))]
+    train_idx = list(itertools.chain(*train_data))[-1]
+    train_df = df.iloc[df.index <= train_idx]
+    val_df = df.iloc[df.index > train_idx]
+    for data_dir, df in [[TRAIN_DIR, train_df], [VALIDATION_DIR, val_df]]:
         if os.path.isdir(data_dir):
             shutil.rmtree(data_dir)
-        for image_name in images:
-            _class = CLASS_NAMES[int(_get_index(image_path=image_name) in ANOMALY_INDICES)]
+        for image_name in df["images"].values:
+            _class = CLASS_NAMES[int(_get_index(image_name) in ANOMALIES_INDICES)]
             from_dir = os.path.join(IMAGES_DIR, _class, image_name)
             to_dir = os.path.join(data_dir, _class, image_name)
             os.makedirs(os.path.dirname(to_dir), exist_ok=True)
@@ -130,5 +127,5 @@ if __name__ == '__main__':
     video_local_path = os.path.join(RAW_DIR, video_file)
     [os.makedirs(_dir, exist_ok=True) for _dir in [RAW_DIR, IMAGES_DIR]]
     download_data(url=VIDEO_URL, save_path=VIDEO_FILE)
-    extract_images(video_path=VIDEO_FILE, dataset_dir=IMAGES_DIR)
-    split_train_val_test(0.1)
+    # extract_images(video_path=VIDEO_FILE, dataset_dir=IMAGES_DIR)
+    split_train_val(0.1)
