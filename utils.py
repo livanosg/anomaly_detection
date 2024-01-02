@@ -1,22 +1,5 @@
-import os
-from datetime import datetime
-
 import cv2
 import numpy as np
-
-from config import TRIALS_DIR
-
-
-def get_latest_trial_id():
-    """
-    Retrieves the latest trial ID from the trials' directory.
-
-    Returns:
-        str: The latest trial ID.
-    """
-    latest_trial_id = sorted(os.listdir(TRIALS_DIR), key=lambda x: datetime.strptime(x, "%Y%m%d%H%M%S"))[-1]
-    print("latest_trial_id", latest_trial_id)
-    return latest_trial_id
 
 
 def inspect_data(dataset, model, threshold, conf):
@@ -61,7 +44,8 @@ def inspect_data(dataset, model, threshold, conf):
         image = input_image.numpy().squeeze() * 255
         image = np.round(image, 0).astype(np.uint8)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        cv2.putText(img=image, text=conf.class_names[y_pred].capitalize(), org=(150, 30), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=color, thickness=2)
+        cv2.putText(img=image, text=conf.class_names[y_pred].capitalize(), org=(150, 30),
+                    fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=color, thickness=2)
         cv2.setWindowTitle(window_name, window_title)
         cv2.imshow(window_name, image)
         key = cv2.waitKey(10)
