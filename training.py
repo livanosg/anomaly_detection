@@ -9,8 +9,8 @@ from keras.metrics import Precision, Recall, MeanSquaredError
 from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, BackupAndRestore, CSVLogger, EarlyStopping
 
 from datasets import split_inputs_labels
-from model import supervised_anomaly_detector, unsupervised_anomaly_detector, pr_threshold
-from metrics import plot_metrics
+from model import supervised_anomaly_detector, unsupervised_anomaly_detector
+from metrics import plot_metrics, plot_training_history, pr_threshold
 
 
 def supervised_training(train_ds, val_ds, conf):
@@ -31,15 +31,11 @@ def supervised_training(train_ds, val_ds, conf):
     with open(os.path.join(conf.model_dir, "summary.txt"), 'w') as f:
         model.summary(print_fn=lambda x: f.write(x + '\n'))
     model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
-    model.fit(x=train_ds, validation_data=val_ds, epochs=conf.epochs, callbacks=callbacks)
+    history = model.fit(x=train_ds, validation_data=val_ds, epochs=conf.epochs, callbacks=callbacks)
+    plot_training_history(history.history, conf, save=True)
 
     train_probability = model.predict(train_input).squeeze()
-    threshold = pr_threshold(y_true=train_label, probas_pred=train_probability, conf=conf, save=True)
-    ic(threshold)
-    ic(threshold.shape)
-    ic(threshold.dtype)
-
-    return model, threshold
+    pr_threshold(y_true=train_label, probas_pred=train_probability, conf=conf, save=True)
 
 
 def unsupervised_training(train_ds, val_ds, conf):
@@ -86,15 +82,13 @@ def unsupervised_training(train_ds, val_ds, conf):
     # if save:
     np.save(os.path.join(conf.model_dir, "threshold.npy"), threshold)
 
-    return model, threshold
-
 
 def validate_supervised_model(title, dataset, model, threshold, conf, save=False):
     inpts, labels = split_inputs_labels(dataset)
     labels = np.concatenate(list(labels.as_numpy_iterator()))
     probas = model.predict(inpts).squeeze()
     preds = np.greater_equal(probas, threshold).astype(int)
-    plot_metrics(title=title, y_true=labels, y_prob=probas, y_pred=preds, conf=conf, save=save)
+    plot_metrics(title=title, y_true=labels, y_prob=probas, y_pred=preds, threshold=threshold, conf=conf, save=save)
 
 
 def validate_unsupervised_model(title, dataset, model, threshold, conf, save=False):
@@ -106,7 +100,7 @@ def validate_unsupervised_model(title, dataset, model, threshold, conf, save=Fal
     rec_errors = np.concatenate(rec_errors)
     labels = np.concatenate(labels)
     preds = np.greater_equal(rec_errors, threshold).astype(int)
-    plot_metrics(title=title, y_true=labels, y_prob=rec_errors, y_pred=preds, conf=conf, save=save)
+    plot_metrics(title=title, y_true=labels, y_prob=rec_errors, y_pred=preds, threshold=threshold, conf=conf, save=save)
 
 
 def reconstruction_error(inpt, model):
