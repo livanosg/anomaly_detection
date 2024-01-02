@@ -15,15 +15,18 @@ IMG_WIDTH = 224
 CHANNELS = 3
 INPUT_SHAPE = (IMG_HEIGHT, IMG_WIDTH, CHANNELS)
 BATCH_SIZE = 32
-LEARNING_RATE = 1e-4
-EPOCHS = 100
+LEARNING_RATE = 1e-3
+EPOCHS = 2
 SEED = 2
+LABEL_TYPE = "categorical"
 
 
 class Config:
     """Configuration class for the anomaly detection project."""
+
     def __init__(self, method=METHOD, trial_id=TRIAL_ID, mode=MODE, class_names=CLASS_NAMES,
-                 input_shape=INPUT_SHAPE, batch_size=BATCH_SIZE, learning_rate=LEARNING_RATE, epochs=EPOCHS, seed=SEED):
+                 input_shape=INPUT_SHAPE, batch_size=BATCH_SIZE, label_type=LABEL_TYPE, learning_rate=LEARNING_RATE,
+                 epochs=EPOCHS, seed=SEED):
         """
         Initializes the Config instance.
 
@@ -56,10 +59,9 @@ class Config:
         [os.makedirs(_dir, exist_ok=True) for _dir in [self.model_dir, self.metrics_dir]]
 
         self.class_names = class_names
+        self.label_type = label_type
         self.input_shape = input_shape
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.epochs = epochs
         self.seed = seed
-
-

@@ -4,8 +4,8 @@ import numpy as np
 import tensorflow as tf
 from icecream import ic
 from keras.optimizers import Adam
-from keras.losses import BinaryFocalCrossentropy, MeanAbsoluteError
-from keras.metrics import Precision, Recall, MeanSquaredError
+from keras.losses import BinaryFocalCrossentropy, CategoricalFocalCrossentropy, MeanSquaredError
+from keras.metrics import Precision, Recall, MeanAbsoluteError
 from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, BackupAndRestore, CSVLogger, EarlyStopping
 
 from datasets import split_inputs_labels
@@ -25,17 +25,25 @@ def supervised_training(train_ds, val_ds, conf):
                  CSVLogger(filename=os.path.join(conf.model_dir, "history.csv"), append=True),
                  ReduceLROnPlateau(factor=0.5, patience=10, cooldown=5),
                  EarlyStopping(patience=20, restore_best_weights=True)]
-
-    loss = BinaryFocalCrossentropy()
+    if conf.label_type == "categorical":
+        loss = CategoricalFocalCrossentropy()
+    else:
+        loss = BinaryFocalCrossentropy()
     optimizer = Adam(learning_rate=conf.learning_rate)
+    print(model.summary())
+
     with open(os.path.join(conf.model_dir, "summary.txt"), 'w') as f:
         model.summary(print_fn=lambda x: f.write(x + '\n'))
     model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
     history = model.fit(x=train_ds, validation_data=val_ds, epochs=conf.epochs, callbacks=callbacks)
     plot_training_history(history.history, conf, save=True)
 
-    train_probability = model.predict(train_input).squeeze()
-    pr_threshold(y_true=train_label, probas_pred=train_probability, conf=conf, save=True)
+    train_probas_pred = model.predict(train_input).squeeze()
+    if conf.label_type == "categorical":
+        print(train_label.shape)
+        train_label = train_label[..., 1]
+        train_probas_pred = train_probas_pred[..., 1]
+    pr_threshold(y_true=train_label, probas_pred=train_probas_pred, conf=conf, save=True)
 
 
 def unsupervised_training(train_ds, val_ds, conf):
@@ -52,15 +60,16 @@ def unsupervised_training(train_ds, val_ds, conf):
 
     model = unsupervised_anomaly_detector(input_shape=conf.input_shape)
 
-    metrics = [MeanSquaredError()]
+    metrics = [MeanAbsoluteError()]
     callbacks = [ModelCheckpoint(filepath=os.path.join(conf.model_dir, "model.keras"), save_best_only=True),
                  BackupAndRestore(os.path.join(conf.model_dir, "backup"), delete_checkpoint=False),
                  CSVLogger(os.path.join(conf.model_dir, "history.csv"), append=True),
                  ReduceLROnPlateau(patience=10, cooldown=5, monitor='loss', mode="min"),
                  EarlyStopping(patience=30, restore_best_weights=True, monitor='loss', mode="min")]
 
-    loss = MeanAbsoluteError()
+    loss = MeanSquaredError()
     optimizer = Adam(learning_rate=conf.learning_rate)
+    print(model.summary())
     with open(os.path.join(conf.model_dir, "summary"), 'w') as f:
         model.summary(print_fn=lambda x: f.write(x + '\n'))
     model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
@@ -76,9 +85,6 @@ def unsupervised_training(train_ds, val_ds, conf):
     ic(train_reconstruction_errors.std())
 
     threshold = train_reconstruction_errors.mean() + train_reconstruction_errors.std()
-    ic(threshold)
-    ic(threshold.shape)
-    ic(threshold.dtype)
     # if save:
     np.save(os.path.join(conf.model_dir, "threshold.npy"), threshold)
 
@@ -87,7 +93,13 @@ def validate_supervised_model(title, dataset, model, threshold, conf, save=False
     inpts, labels = split_inputs_labels(dataset)
     labels = np.concatenate(list(labels.as_numpy_iterator()))
     probas = model.predict(inpts).squeeze()
+    if conf.label_type == "categorical":
+        labels = labels[..., 1]
+        probas = probas[..., 1]
+    ic(probas.mean())
+    ic(probas.std())
     preds = np.greater_equal(probas, threshold).astype(int)
+
     plot_metrics(title=title, y_true=labels, y_prob=probas, y_pred=preds, threshold=threshold, conf=conf, save=save)
 
 
