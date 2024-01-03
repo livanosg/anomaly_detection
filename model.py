@@ -6,14 +6,14 @@ from keras.layers import SeparableConv2D, MaxPooling2D, Convolution2DTranspose, 
 def supervised_anomaly_detector(input_shape):
     return Sequential([
         Input(input_shape),
-        Conv2D(128, 3, padding='same', activation='relu'),  # 224
+        Conv2D(64, 3, padding='same', activation='relu'),  # 224
         Dropout(0.2),
         BatchNormalization(),
         MaxPooling2D(),
-        Conv2D(128, 3, padding='same', activation='relu'),  # 224
+        Conv2D(64, 3, padding='same', activation='relu'),  # 224
         Dropout(0.2),
         MaxPooling2D(),
-        Conv2D(256, 3, padding='same', activation='relu'),  # 224
+        Conv2D(128, 3, padding='same', activation='relu'),  # 224
         Dropout(0.2),
         BatchNormalization(),
         MaxPooling2D(),

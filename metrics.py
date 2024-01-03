@@ -41,7 +41,7 @@ def plot_metrics(title, y_true, y_prob, threshold, conf, save=True):
                     y_prob[np.logical_and(y_true == 1, y_pred == 0)],
                     y_prob[np.logical_and(y_true == 1, y_pred == 1)]
                     ],
-                   bins=100,
+                   bins=50,
                    density=True,
                    label=["TP normal", "FN normal", "FP normal", "TN normal"])
     axs[1, 0].axvline(threshold, ls="--", color="black", label="Threshold")

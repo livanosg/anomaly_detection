@@ -21,6 +21,7 @@ anomalies_idx = list(itertools.chain(*anomalies))
 
 DATASETS = {"train": os.path.join(DATA_DIR, "train"),
             "validation": os.path.join(DATA_DIR, "validation"),
+            "test": os.path.join(DATA_DIR, "test"),
             "all": os.path.join(DATA_DIR, "images")
             }
 
@@ -110,7 +111,7 @@ def create_csv(dataset_dir):
     data.to_csv(os.path.join(dataset_dir, f"{os.path.basename(dataset_dir)}_data.csv"), index=False)
 
 
-def split_train_val(val_size=0.2):
+def split_train_val(val_size=0.1, test_size=0.1):
     """
     Splits the dataset into training, validation, and test sets based on specified sizes.
 
@@ -119,11 +120,14 @@ def split_train_val(val_size=0.2):
     """
 
     df = pd.read_csv(os.path.join(DATASETS["all"], f"{os.path.basename(DATASETS['all'])}_data.csv"))
-    train_data = anomalies[:int(len(anomalies) * (1 - val_size))]
+    train_data = anomalies[:int(len(anomalies) * (1 - (val_size + test_size)))]
+    val_data = anomalies[len(train_data): int(len(anomalies) * (1 - test_size))]
     train_idx = list(itertools.chain(*train_data))[-1]
+    val_idx = list(itertools.chain(*val_data))[-1]
     train_df = df.iloc[df.index <= train_idx]
-    val_df = df.iloc[df.index > train_idx]
-    for data_dir, df in [[DATASETS["train"], train_df], [DATASETS["validation"], val_df]]:
+    val_df = df.iloc[(train_idx < df.index) & (df.index <= val_idx)]
+    test_df = df.iloc[val_idx < df.index]
+    for data_dir, df in [[DATASETS["train"], train_df], [DATASETS["validation"], val_df],  [DATASETS["test"], test_df]]:
         if os.path.isdir(data_dir):
             shutil.rmtree(data_dir)
         for image_name in df["images"].values:
@@ -140,6 +144,6 @@ if __name__ == '__main__':
     video_file = os.path.basename(video_url)
     video_path = os.path.join(RAW_DIR, video_file)
     [os.makedirs(_dir, exist_ok=True) for _dir in [RAW_DIR, DATASETS["all"]]]
-    download_data(url=video_url, save_path=video_path)
-    extract_images(from_video=video_path, to_dir=DATASETS["all"])
-    split_train_val(0.2)
+    # download_data(url=video_url, save_path=video_path)
+    # extract_images(from_video=video_path, to_dir=DATASETS["all"])
+    split_train_val(0.1, 0.1)

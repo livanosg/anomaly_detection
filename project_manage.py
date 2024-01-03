@@ -6,8 +6,8 @@ TRIALS_DIR = os.path.join(ROOT_DIR, "trials")
 
 CLASS_NAMES = ("normal", "anomaly")
 
-TRIAL_ID = "20240103194538"  # "latest"
-MODE = "predict"
+TRIAL_ID = None  # "latest"
+MODE = "train"  # "predict"
 METHOD = "supervised"
 LABEL_TYPE = "categorical"
 

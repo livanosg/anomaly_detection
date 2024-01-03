@@ -21,7 +21,10 @@ def supervised_training(train_ds, val_ds, conf):
     val_input, val_label = split_inputs_labels(val_ds)
     val_label = np.concatenate(list(val_label.as_numpy_iterator()))
 
-    model = supervised_anomaly_detector(input_shape=conf.input_shape)
+    if os.path.isfile(os.path.join(conf.model_dir, "model.keras")):
+        model = keras.models.load_model(os.path.join(conf.model_dir, "model.keras"))
+    else:
+        model = supervised_anomaly_detector(input_shape=conf.input_shape)
 
     metrics = [F1Score(average="macro")]
     callbacks = [
