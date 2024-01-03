@@ -6,19 +6,19 @@ TRIALS_DIR = os.path.join(ROOT_DIR, "trials")
 
 CLASS_NAMES = ("normal", "anomaly")
 
-TRIAL_ID = None
-MODE = "train"
+TRIAL_ID = "20240103194538"  # "latest"
+MODE = "predict"
 METHOD = "supervised"
+LABEL_TYPE = "categorical"
 
 IMG_HEIGHT = 224
 IMG_WIDTH = 224
 CHANNELS = 3
 INPUT_SHAPE = (IMG_HEIGHT, IMG_WIDTH, CHANNELS)
 BATCH_SIZE = 32
-LEARNING_RATE = 1e-3
-EPOCHS = 2
+LEARNING_RATE = 1e-4
+EPOCHS = 30
 SEED = 2
-LABEL_TYPE = "categorical"
 
 
 class Config:

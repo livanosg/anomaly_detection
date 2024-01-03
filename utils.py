@@ -21,8 +21,8 @@ def inspect_data(dataset, model, threshold, conf):
         if conf.method == "supervised":
             text = "Probability"
             y_prob = model.predict(input_image, verbose=0).squeeze()
-
-            y_pred = np.greater_equal(y_prob, threshold).astype(int)
+            if conf.classification == "categorical":
+                y_pred = np.greater_equal(y_prob[..., 1], threshold).astype(int)
         elif conf.method == "unsupervised":
             text = "Reconstruction loss"
             recon_error = model.evaluate(input_image, input_image, verbose=0).squeeze()
@@ -42,7 +42,6 @@ def inspect_data(dataset, model, threshold, conf):
             color = (255, 0, 0)
 
         image = input_image.numpy().squeeze() * 255
-        image = np.round(image, 0).astype(np.uint8)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         cv2.putText(img=image, text=conf.class_names[y_pred].capitalize(), org=(150, 30),
                     fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=color, thickness=2)

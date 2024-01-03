@@ -5,17 +5,16 @@ import matplotlib as mpl
 import pandas as pd
 from icecream import ic
 from matplotlib import pyplot as plt
-from sklearn.calibration import CalibrationDisplay
-from sklearn.metrics import PrecisionRecallDisplay, ConfusionMatrixDisplay, \
-                             classification_report, precision_recall_curve
+from sklearn.metrics import PrecisionRecallDisplay, ConfusionMatrixDisplay, RocCurveDisplay,\
+                            classification_report, precision_recall_curve
 
 
-def plot_metrics(title, y_true, y_prob, y_pred, threshold, conf, save=True):
+def plot_metrics(title, y_true, y_prob, threshold, conf, save=True):
+    y_pred = np.greater_equal(y_prob, threshold).astype(y_true.dtype)
     report = classification_report(y_true=y_true, y_pred=y_pred,
                                    target_names=conf.class_names,
                                    digits=3)
     print(report)
-
     plt.style.use("ggplot")
     mpl.rcParams["figure.dpi"] = 200
     fontsize = 7
@@ -27,18 +26,26 @@ def plot_metrics(title, y_true, y_prob, y_pred, threshold, conf, save=True):
     axs[0, 0].legend(loc="lower left", fontsize=fontsize, shadow=True)
     axs[0, 0].set_ylim(0, 1)
     axs[0, 0].set_xlim(0, 1)
-    if conf.method == "supervised":
-        CalibrationDisplay.from_predictions(y_true=y_true, y_prob=y_prob, ax=axs[0, 1], n_bins=50)
-        axs[0, 1].set_title("Calibration curve")
-        axs[0, 1].legend(loc="lower right", fontsize=fontsize, shadow=True)
+
+    RocCurveDisplay.from_predictions(y_true=y_true, y_pred=y_prob, ax=axs[0, 1], plot_chance_level=True)
+    axs[0, 1].set_title("ROC curve")
+    axs[0, 1].legend(loc="lower right", fontsize=fontsize, shadow=True)
 
     axis_title = "Probability" if conf.method == "supervised" else "Reconstruction error"
     axs[1, 0].set_title(f"{axis_title} distribution")
     axs[1, 0].set_ylabel("N Samples")
     axs[1, 0].set_xlabel(f"{axis_title}")
-    axs[1, 0].hist([y_prob[y_true == 0], y_prob[y_true == 1]], bins=100)
-    axs[1, 0].axvline(threshold, ls="--", color="black")
-    axs[1, 0].legend(["threshold"] + list(conf.class_names), loc="upper right", fontsize=fontsize, shadow=True)  # ["threshold"] + conf.class_names
+    np.logical_and(y_true == 0, y_pred == 0)
+    axs[1, 0].hist([y_prob[np.logical_and(y_true == 0, y_pred == 0)],
+                    y_prob[np.logical_and(y_true == 0, y_pred == 1)],
+                    y_prob[np.logical_and(y_true == 1, y_pred == 0)],
+                    y_prob[np.logical_and(y_true == 1, y_pred == 1)]
+                    ],
+                   bins=100,
+                   density=True,
+                   label=["TP normal", "FN normal", "FP normal", "TN normal"])
+    axs[1, 0].axvline(threshold, ls="--", color="black", label="Threshold")
+    axs[1, 0].legend(loc="upper right", fontsize=fontsize, shadow=True)  # ["threshold"] + conf.class_names
 
     ConfusionMatrixDisplay.from_predictions(y_true=y_true, y_pred=y_pred, ax=axs[1, 1],
                                             display_labels=conf.class_names)
@@ -52,7 +59,6 @@ def plot_metrics(title, y_true, y_prob, y_pred, threshold, conf, save=True):
             file.write(report)
         fig.savefig(os.path.join(conf.metrics_dir, f"{title.lower()}_plots.png"))
         print(f"Metrics saved at {conf.metrics_dir}")
-
     else:
         plt.show()
 
@@ -73,14 +79,15 @@ def plot_training_history(history, conf, save=True):
     for metric, ax2 in zip(metrics, axs.reshape(-1)):
         ax2.set_title(metric.capitalize())
         ax2.plot(metric, data=history_df)
-        if metric == "lr":
-            ax2.legend(loc="upper right", fontsize=fontsize, shadow=True)
-            ax2.set_ylim(history_df[metric].min() * 0.1, history_df[metric].max() * 10)
-            ax2.set_yscale("log")
         if "val_" + metric in history_df.columns:
             ax2.plot("val_" + metric, data=history_df)
         ax2.legend(loc="lower left", fontsize=fontsize, shadow=True)
         ax2.set_xlabel("epochs")
+
+        if metric == "lr":
+            ax2.legend(loc="upper right", fontsize=fontsize, shadow=True)
+            ax2.set_ylim(history_df[metric].min() * 0.1, history_df[metric].max() * 10)
+            ax2.set_yscale("log")
     if save:
         fig.savefig(os.path.join(conf.model_dir, f"training_history.png"))
         print(f"Training information saved at: {conf.model_dir}")
@@ -90,10 +97,19 @@ def plot_training_history(history, conf, save=True):
 
 def pr_threshold(y_true, probas_pred, conf, save=True):
     precision, recall, thresholds = precision_recall_curve(y_true=y_true, probas_pred=probas_pred, pos_label=1)
-    euclidean_distance = np.sqrt(np.power(1. - recall, 2) + np.power(1. - precision, 2))  # Distance from (1, 1)
+    euclidean_distance = np.sqrt((1 - precision) ** 2 + (1 - recall) ** 2)  # Distance from (1, 1)
+
     threshold = thresholds[np.argmin(euclidean_distance)]
-    ic(threshold)
     # threshold = 0.5
+    if save:
+        np.save(os.path.join(conf.model_dir, "threshold.npy"), threshold)
+    return threshold
+
+
+def f1_threshold(y_true, probas_pred, conf, save=True):
+    precision, recall, thresholds = precision_recall_curve(y_true=y_true, probas_pred=probas_pred, pos_label=1)
+    f1 = 2 * (precision * recall) / (precision + recall)  # Distance from (1, 1)
+    threshold = thresholds[np.argmax(f1)]
     if save:
         np.save(os.path.join(conf.model_dir, "threshold.npy"), threshold)
     return threshold

@@ -1,21 +1,25 @@
-from keras import Sequential, Input
-from keras.layers import SeparableConv2D, MaxPooling2D, Convolution2DTranspose, GlobalAveragePooling2D, Dense
+from keras.models import Sequential
+from keras.layers import SeparableConv2D, MaxPooling2D, Convolution2DTranspose, GlobalAveragePooling2D, Dense, \
+    Conv2D, Dropout, BatchNormalization, Input
 
 
 def supervised_anomaly_detector(input_shape):
     return Sequential([
-        Input(shape=input_shape, name="input"),
-        SeparableConv2D(128, 3, depth_multiplier=4, padding='same', activation='relu', kernel_initializer="he_uniform"),  # 224
-        MaxPooling2D(),  # 112
-        SeparableConv2D(128, 3, depth_multiplier=4, padding='same', activation='relu', kernel_initializer="he_uniform"),  # 112
-        MaxPooling2D(),  # 56
-        SeparableConv2D(256, 3, depth_multiplier=2, padding='same', activation='relu', kernel_initializer="he_uniform"),  # 56
-        MaxPooling2D(),  # 28
-        SeparableConv2D(512, 3, depth_multiplier=2, padding='same', activation='relu', kernel_initializer="he_uniform"),  # 28
-        SeparableConv2D(128, 3, depth_multiplier=2, padding='same', activation='relu', kernel_initializer="he_uniform"),  # 28
-        SeparableConv2D(128, 3, depth_multiplier=2, padding='same', kernel_initializer="he_uniform"),  # 56
+        Input(input_shape),
+        Conv2D(128, 3, padding='same', activation='relu'),  # 224
+        Dropout(0.2),
+        BatchNormalization(),
+        MaxPooling2D(),
+        Conv2D(128, 3, padding='same', activation='relu'),  # 224
+        Dropout(0.2),
+        MaxPooling2D(),
+        Conv2D(256, 3, padding='same', activation='relu'),  # 224
+        Dropout(0.2),
+        BatchNormalization(),
+        MaxPooling2D(),
+        Conv2D(256, 3, padding='same'),  # 224
         GlobalAveragePooling2D(),
-        Dense(2, activation='softmax', name="output")
+        Dense(2, activation='softmax')
     ])
 
 
