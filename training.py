@@ -18,9 +18,6 @@ from metrics import plot_metrics, plot_training_history, f1_threshold
 
 
 def supervised_training(train_ds, val_ds, conf):
-    val_input, val_label = split_inputs_labels(val_ds)
-    val_label = np.concatenate(list(val_label.as_numpy_iterator()))
-
     if os.path.isfile(os.path.join(conf.model_dir, "model.keras")):
         model = keras.models.load_model(os.path.join(conf.model_dir, "model.keras"))
     else:
@@ -49,12 +46,9 @@ def supervised_training(train_ds, val_ds, conf):
     plot_training_history(history.history, conf, save=True)
     model = keras.models.load_model(os.path.join(conf.model_dir, "model.keras"))
 
-    val_probas = model.predict(val_input)
-    if conf.label_type == "categorical":
-        val_label = val_label[..., 1]
-        val_probas = val_probas[..., 1]
+    probas, labels = get_predictions_labels(val_ds, model, conf)
     # pr_threshold(y_true=val_label, probas_pred=val_probas, conf=conf, save=True)
-    f1_threshold(y_true=val_label, probas_pred=val_probas, conf=conf, save=True)
+    f1_threshold(y_true=labels, probas_pred=probas, conf=conf, save=True)
 
 
 def unsupervised_training(train_ds, val_ds, conf):
@@ -98,12 +92,7 @@ def unsupervised_training(train_ds, val_ds, conf):
 
 
 def validate_supervised_model(title, dataset, model, threshold, conf, save=False):
-    images, labels = split_inputs_labels(dataset)
-    labels = np.concatenate(list(labels.as_numpy_iterator()))
-    probas = model.predict(images)
-    if conf.label_type == "categorical":
-        probas = probas[..., 1]
-        labels = labels[..., 1]
+    probas, labels = get_predictions_labels(dataset, model, conf)
     plot_metrics(title=title, y_true=labels, y_prob=probas, threshold=threshold, conf=conf, save=save)
 
 
@@ -120,3 +109,13 @@ def validate_unsupervised_model(title, dataset, model, threshold, conf, save=Fal
 
 def reconstruction_error(inpt, model):
     return np.mean(np.absolute(inpt.numpy() - model.predict(inpt, verbose=0)), axis=(1, 2, 3))
+
+
+def get_predictions_labels(dataset, model, conf):
+    images, labels = split_inputs_labels(dataset)
+    labels = np.concatenate(list(labels.as_numpy_iterator()))
+    probas = model.predict(images)
+    if conf.label_type == "categorical":
+        probas = probas[..., 1]
+        labels = labels[..., 1]
+    return probas, labels
