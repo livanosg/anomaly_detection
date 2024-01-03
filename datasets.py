@@ -19,23 +19,25 @@ from setup_data import DATASETS
 #     image = tf.image.stateless_random_hue(image, max_delta=0.2, seed=seeds)
 #     return image
 
-
-rand_augment = keras_cv.layers.RandAugment(
-    value_range=(0, 255),
-    augmentations_per_image=3,
-    magnitude=0.3,
-    magnitude_stddev=0.2,
-    rate=1.0,
+#  value_range=(0, 255),
+#     augmentations_per_image=3,
+#     magnitude=0.3,
+#     magnitude_stddev=0.2,
+#     rate=1.0,
+layers = keras_cv.layers.RandAugment.get_standard_policy(
+    value_range=(0, 255), magnitude=0.5, magnitude_stddev=0.2
 )
+layers += [keras_cv.layers.GridMask((0., 0.3))]
 
-rand_augment.layers += [keras_cv.layers.CutMix(), keras_cv.layers.MixUp()]
-
-
+pipeline = keras_cv.layers.RandomAugmentationPipeline(
+    layers=layers, augmentations_per_image=3
+)
 #
 def augmentations(image, label):
     inputs = {"images": image, "labels": label}
-    # inputs = keras_cv.layers.MixUp()(inputs, training=True)
-    inputs = rand_augment(inputs)
+    inputs = keras_cv.layers.MixUp()(inputs)
+    inputs = keras_cv.layers.FourierMix()(inputs)
+    inputs = pipeline(inputs)
     return inputs["images"], inputs["labels"]
 
 
@@ -69,8 +71,10 @@ def split_inputs_labels(dataset):
 if __name__ == '__main__':
     conf = Config()
     data = get_dataset("train", conf, shuffle=False, augment=True)
+    cv2.namedWindow("test", cv2.WINDOW_KEEPRATIO)
+
     for image, label in data.unbatch().batch(1):
-        img = np.squeeze(image.numpy()) * 255
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        img = np.squeeze(np.clip(image.numpy(), 0, 1.)) * 255
+        img = cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_RGB2BGR)
         cv2.imshow("test", img)
         cv2.waitKey(0)
