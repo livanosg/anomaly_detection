@@ -3,47 +3,45 @@ import os
 import numpy as np
 import matplotlib as mpl
 import pandas as pd
-from icecream import ic
 from matplotlib import pyplot as plt
-from sklearn.metrics import PrecisionRecallDisplay, ConfusionMatrixDisplay, RocCurveDisplay,\
-                            classification_report, precision_recall_curve
+from sklearn.metrics import PrecisionRecallDisplay, ConfusionMatrixDisplay, RocCurveDisplay, classification_report
 
 
-def plot_metrics(title, y_true, y_prob, threshold, conf, save=True):
-    y_pred = np.greater_equal(y_prob, threshold).astype(y_true.dtype)
-    report = classification_report(y_true=y_true, y_pred=y_pred,
-                                   target_names=conf.class_names,
-                                   digits=3)
+def plot_metrics(title, y_true, y_prob, y_pred, threshold, conf, save=True):
+    report = classification_report(y_true=y_true, y_pred=y_pred, target_names=conf.class_names, digits=3)
     print(report)
     plt.style.use("ggplot")
-    mpl.rcParams["figure.dpi"] = 200
+    mpl.rcParams["figure.dpi"] = 100
     fontsize = 7
     fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(10, 10), tight_layout=True)
-    fig.suptitle(title, fontsize=fontsize * 2)
+    fig.suptitle(title.capitalize(), fontsize=fontsize * 2)
 
-    PrecisionRecallDisplay.from_predictions(y_true=y_true, y_pred=y_prob, ax=axs[0, 0], plot_chance_level=True)
+    PrecisionRecallDisplay.from_predictions(y_true=y_true, y_pred=y_prob, ax=axs[0, 0],
+                                            plot_chance_level=True, pos_label=conf.pos_label)
     axs[0, 0].set_title("Precision Recall curve")
     axs[0, 0].legend(loc="lower left", fontsize=fontsize, shadow=True)
     axs[0, 0].set_ylim(0, 1)
     axs[0, 0].set_xlim(0, 1)
 
-    RocCurveDisplay.from_predictions(y_true=y_true, y_pred=y_prob, ax=axs[0, 1], plot_chance_level=True)
+    RocCurveDisplay.from_predictions(y_true=y_true, y_pred=y_prob, ax=axs[0, 1],
+                                     plot_chance_level=True, label=conf.pos_label)
     axs[0, 1].set_title("ROC curve")
     axs[0, 1].legend(loc="lower right", fontsize=fontsize, shadow=True)
 
-    axis_title = "Probability" if conf.method == "supervised" else "Reconstruction error"
+    axis_title = "Probability"
+    if conf.model_type == "autoencoder":
+        axis_title = "Reconstruction error"
+
     axs[1, 0].set_title(f"{axis_title} distribution")
     axs[1, 0].set_ylabel("N Samples")
     axs[1, 0].set_xlabel(f"{axis_title}")
-    np.logical_and(y_true == 0, y_pred == 0)
     axs[1, 0].hist([y_prob[np.logical_and(y_true == 0, y_pred == 0)],
                     y_prob[np.logical_and(y_true == 0, y_pred == 1)],
                     y_prob[np.logical_and(y_true == 1, y_pred == 0)],
                     y_prob[np.logical_and(y_true == 1, y_pred == 1)]
                     ],
                    bins=50,
-                   density=True,
-                   label=["TP normal", "FN normal", "FP normal", "TN normal"])
+                   label=["normal", "miss_normal", "miss_anomaly", "anomaly"])
     axs[1, 0].axvline(threshold, ls="--", color="black", label="Threshold")
     axs[1, 0].legend(loc="upper right", fontsize=fontsize, shadow=True)  # ["threshold"] + conf.class_names
 
@@ -72,7 +70,7 @@ def plot_training_history(history, conf, save=True):
     fontsize = 7
 
     cols = 2
-    rows = int(np.ceil(len(metrics) / cols))
+    rows = max([1, int(np.ceil(len(metrics) / cols))])
     fig, axs = plt.subplots(ncols=cols, nrows=rows, tight_layout=True)
     fig.suptitle("Training graphs", fontsize=fontsize * 2)
 
@@ -93,23 +91,3 @@ def plot_training_history(history, conf, save=True):
         print(f"Training information saved at: {conf.model_dir}")
     else:
         plt.show()
-
-
-def pr_threshold(y_true, probas_pred, conf, save=True):
-    precision, recall, thresholds = precision_recall_curve(y_true=y_true, probas_pred=probas_pred, pos_label=1)
-    euclidean_distance = np.sqrt((1 - precision) ** 2 + (1 - recall) ** 2)  # Distance from (1, 1)
-
-    threshold = thresholds[np.argmin(euclidean_distance)]
-    # threshold = 0.5
-    if save:
-        np.save(os.path.join(conf.model_dir, "threshold.npy"), threshold)
-    return threshold
-
-
-def f1_threshold(y_true, probas_pred, conf, save=True):
-    precision, recall, thresholds = precision_recall_curve(y_true=y_true, probas_pred=probas_pred, pos_label=1)
-    f1 = 2 * (precision * recall) / (precision + recall)  # Distance from (1, 1)
-    threshold = thresholds[np.argmax(f1)]
-    if save:
-        np.save(os.path.join(conf.model_dir, "threshold.npy"), threshold)
-    return threshold

@@ -18,12 +18,12 @@ def inspect_data(dataset, model, threshold, conf):
         y_prob = None
         y_pred = None
         text = ""
-        if conf.method == "supervised":
+        if conf.model_type == "supervised":
             text = "Probability"
             y_prob = model.predict(input_image, verbose=0).squeeze()
             if conf.classification == "categorical":
                 y_pred = np.greater_equal(y_prob[..., 1], threshold).astype(int)
-        elif conf.method == "unsupervised":
+        elif conf.model_type == "unsupervised":
             text = "Reconstruction loss"
             recon_error = model.evaluate(input_image, input_image, verbose=0).squeeze()
             y_prob = recon_error
@@ -32,7 +32,7 @@ def inspect_data(dataset, model, threshold, conf):
         window_title = " ".join([window_title,
                                  f"Threshold: {np.round(threshold, 2)}",
                                  f"{text}: {y_prob}",
-                                 f"Precidtion: {np.round(y_pred, 2)}"])
+                                 f"Prediction: {np.round(y_pred, 2)}"])
 
         if y_pred == 1:
             color = (0, 0, 255)

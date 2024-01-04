@@ -3,7 +3,7 @@ from keras.layers import SeparableConv2D, MaxPooling2D, Convolution2DTranspose, 
     Conv2D, Dropout, BatchNormalization, Input
 
 
-def supervised_anomaly_detector(input_shape):
+def classifier(input_shape):
     return Sequential([
         Input(input_shape),
         Conv2D(64, 3, padding='same', activation='relu'),  # 224
@@ -23,20 +23,20 @@ def supervised_anomaly_detector(input_shape):
     ])
 
 
-def unsupervised_anomaly_detector(input_shape):
+def autoencoder(input_shape):
     return Sequential(
         [Input(shape=input_shape),
-         SeparableConv2D(128, 7, depth_multiplier=5, padding="same", activation="relu"),  # (224, 224)
+         Conv2D(128, 3, padding='same', activation='relu'),  # 224
          MaxPooling2D(),  # (112, 112)
-         SeparableConv2D(64, 5, depth_multiplier=4, padding="same", activation="relu"),  # (112, 112)
-         SeparableConv2D(32, 3, depth_multiplier=3, padding="same", activation="relu"),  # (112, 112)
+         Conv2D(64, 3, padding='same', activation='relu'),  # 224
+         Conv2D(32, 3, padding='same', activation='relu'),  # 224
          MaxPooling2D(),  # (56, 56)
-         SeparableConv2D(32, 3, depth_multiplier=2, padding="same", activation="relu"),  # (56, 56)
+         Conv2D(32, 3, padding='same', activation='relu'),  # 224
          MaxPooling2D(),  # (28, 28)
-         SeparableConv2D(16, 3, depth_multiplier=1, padding="same", activation="relu"),  # (28, 28)
-         Convolution2DTranspose(32, 3, (2, 2), padding="same", activation="relu"),  # (56, 56)
+         Conv2D(16, 3, padding='same', activation='relu'),  # 224
+         Convolution2DTranspose(16, 3, (2, 2), padding="same", activation="relu"),  # (56, 56)
          Convolution2DTranspose(32, 3, (2, 2), padding="same", activation="relu"),  # (112, 112)
-         SeparableConv2D(64, 5, depth_multiplier=2, padding="same", activation="relu"),  # (112, 112)
+         Conv2D(64, 3, padding='same', activation='relu'),  # 224
          Convolution2DTranspose(128, 7, (2, 2), padding="same", activation="relu"),  # (224, 224)
          SeparableConv2D(3, 3, depth_multiplier=3, padding="same", activation="sigmoid")  # (224, 224)
          ])

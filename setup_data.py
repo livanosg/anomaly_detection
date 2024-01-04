@@ -117,6 +117,7 @@ def split_train_val(val_size=0.1, test_size=0.1):
 
     Args:
         val_size (float): Fraction of the dataset to use for validation.
+        test_size (float): Fraction of the dataset to use for test.
     """
 
     df = pd.read_csv(os.path.join(DATASETS["all"], f"{os.path.basename(DATASETS['all'])}_data.csv"))
