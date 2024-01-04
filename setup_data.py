@@ -22,7 +22,7 @@ anomalies_idx = list(itertools.chain(*anomalies))
 DATASETS = {"train": os.path.join(DATA_DIR, "train"),
             "validation": os.path.join(DATA_DIR, "validation"),
             "test": os.path.join(DATA_DIR, "test"),
-            "all": os.path.join(DATA_DIR, "images")
+            "all": os.path.join(DATA_DIR, "all")
             }
 
 
@@ -62,7 +62,7 @@ def extract_images(from_video, to_dir):
     """
     Extract frames from a video and save them as images.
     """
-    print("Extract video to images...")
+    print(f"Extract: {from_video}\n     to: {to_dir}")
     video = cv2.VideoCapture(from_video)
     processes = []
     image_base_name = os.path.splitext(os.path.basename(from_video))[0]
@@ -145,6 +145,6 @@ if __name__ == '__main__':
     video_file = os.path.basename(video_url)
     video_path = os.path.join(RAW_DIR, video_file)
     [os.makedirs(_dir, exist_ok=True) for _dir in [RAW_DIR, DATASETS["all"]]]
-    # download_data(url=video_url, save_path=video_path)
-    # extract_images(from_video=video_path, to_dir=DATASETS["all"])
+    download_data(url=video_url, save_path=video_path)
+    extract_images(from_video=video_path, to_dir=DATASETS["all"])
     split_train_val(0.1, 0.1)

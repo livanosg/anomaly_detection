@@ -26,15 +26,6 @@ def get_reconstruction_errors_labels(dataset, model):
     return np.concatenate(rec_errs), np.concatenate(labels)
 
 
-def f1_threshold(precision, recall, thresholds):
-    return thresholds[np.argmax(2 * (precision * recall) / (precision + recall))]
-
-
-def eu_threshold(precision, recall, thresholds):
-    euclidean_distance = np.sqrt(np.sum(np.square(1 - np.column_stack([precision, recall])), axis=-1))
-    return thresholds[np.argmin(euclidean_distance)]
-
-
 def get_pred_labels(dataset_name, model, conf):
     if conf.model_type == "classifier":
         y_out, y_true = get_outputs_labels(get_dataset(dataset_name, conf=conf), model)
@@ -46,6 +37,15 @@ def get_pred_labels(dataset_name, model, conf):
         raise ValueError(f"Unknown type: {conf.model_type} ")
     y_true = np.argmax(y_true, axis=-1)
     return y_out, y_true
+
+
+def f1_threshold(precision, recall, thresholds):
+    return thresholds[np.argmax(2 * (precision * recall) / (precision + recall))]
+
+
+def eu_threshold(precision, recall, thresholds):
+    euclidean_distance = np.sqrt(np.sum(np.square(1 - np.column_stack([precision, recall])), axis=-1))
+    return thresholds[np.argmin(euclidean_distance)]
 
 
 def get_threshold(dataset_name, model, conf, save=True):
@@ -67,8 +67,3 @@ def validate_model(dataset_name, model, threshold, conf, save):
     y_pred = np.greater_equal(y_out, threshold)
     plot_metrics(title=dataset_name, y_true=y_true, y_prob=y_out, y_pred=y_pred, threshold=threshold,
                  conf=conf, save=save)
-
-
-if __name__ == '__main__':
-    precision = np.random.rand(100000000)
-    recall = np.random.rand(100000000)

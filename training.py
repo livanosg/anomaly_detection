@@ -8,7 +8,6 @@ from keras.losses import CategoricalCrossentropy, MeanAbsoluteError
 
 from datasets import get_autoencoder_dataset
 from metrics import plot_training_history
-from models import classifier
 
 
 def training(train_ds, val_ds, model, conf):
@@ -39,10 +38,3 @@ def training(train_ds, val_ds, model, conf):
     history = model.fit(x=train_ds, validation_data=val_ds, epochs=conf.epochs, callbacks=callbacks)
     plot_training_history(history.history, conf, save=True)
     return model
-
-
-if __name__ == '__main__':
-    import keras
-    model = classifier(input_shape=(224, 224, 3))
-    model.load_weights("/home/meph103/PycharmProjects/anomaly_detection/trials/classifier/20240104205411/model/.weights.h5")
-    print(model)

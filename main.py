@@ -50,4 +50,5 @@ if conf.mode == "validation":
     for data_name in ["validation", "test"]:
         validate_model(dataset_name=data_name, model=model, threshold=threshold, conf=conf, save=True)
 if conf.mode == "predict":
+    threshold = 0.8
     inspect_data(dataset=get_dataset("all", conf=conf), model=model, threshold=threshold, conf=conf)
