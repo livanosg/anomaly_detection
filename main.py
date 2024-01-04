@@ -31,7 +31,13 @@ if __name__ == '__main__':
                 unsupervised_training(train_ds=train_ds, val_ds=val_ds, conf=conf)
         model = keras.models.load_model(os.path.join(conf.model_dir, "model.keras"))
         threshold = np.load(os.path.join(conf.model_dir, "threshold.npy"))
+
         if conf.method == "supervised":
+            validate_supervised_model("train", conf=conf, save=True,
+                                      dataset=train_ds,
+                                      model=model,
+                                      threshold=threshold)
+
             validate_supervised_model("validation", conf=conf, save=True,
                                       dataset=val_ds,
                                       model=model,

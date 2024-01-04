@@ -12,9 +12,10 @@ from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, BackupAndRestore
 from keras.optimizers import Adam
 from keras.losses import CategoricalCrossentropy, BinaryCrossentropy, MeanAbsoluteError
 
-from datasets import split_inputs_labels
+from datasets import split_inputs_labels, get_dataset
 from model import supervised_anomaly_detector, unsupervised_anomaly_detector
 from metrics import plot_metrics, plot_training_history, f1_threshold
+from project_manage import Config
 
 
 def supervised_training(train_ds, val_ds, conf):
@@ -25,7 +26,7 @@ def supervised_training(train_ds, val_ds, conf):
 
     metrics = [F1Score(average="macro")]
     callbacks = [
-        ModelCheckpoint(filepath=os.path.join(conf.model_dir, "model.keras"), save_best_only=True),
+        ModelCheckpoint(filepath=os.path.join(conf.model_dir, "model.keras"), save_best_only=True, save_weights_only=True),
         # BackupAndRestore(backup_dir=os.path.join(conf.model_dir, "backup"), delete_checkpoint=False),
         CSVLogger(filename=os.path.join(conf.model_dir, "history.csv"), append=True),
         ReduceLROnPlateau(factor=0.5, patience=6, cooldown=5, monitor="val_loss", mode="min"),
@@ -46,7 +47,7 @@ def supervised_training(train_ds, val_ds, conf):
     plot_training_history(history.history, conf, save=True)
     model = keras.models.load_model(os.path.join(conf.model_dir, "model.keras"))
 
-    probas, labels = get_predictions_labels(val_ds, model, conf)
+    probas, labels = get_reconstruction_errors(val_ds, model, conf)
     # pr_threshold(y_true=val_label, probas_pred=val_probas, conf=conf, save=True)
     f1_threshold(y_true=labels, probas_pred=probas, conf=conf, save=True)
 
@@ -83,7 +84,7 @@ def unsupervised_training(train_ds, val_ds, conf):
 
     train_reconstruction_errors = []
     for train_input, _ in train_ds:
-        train_reconstruction_errors.append(reconstruction_error(inpt=train_input, model=model))
+        train_reconstruction_errors.append(reconstruction_error(image=train_input, model=model))
 
     train_reconstruction_errors = np.concatenate(train_reconstruction_errors)
     threshold = train_reconstruction_errors.mean() + train_reconstruction_errors.std()
@@ -107,15 +108,44 @@ def validate_unsupervised_model(title, dataset, model, threshold, conf, save=Fal
     plot_metrics(title=title, y_true=labels, y_prob=rec_errors, threshold=threshold, conf=conf, save=save)
 
 
-def reconstruction_error(inpt, model):
-    return np.mean(np.absolute(inpt.numpy() - model.predict(inpt, verbose=0)), axis=(1, 2, 3))
+def reconstruction_error(image, model):
+    output = model.predict(image, verbose=0)
+    image = image.reshape((image.shape[0], -1))
+    keras.losses.mean_absolute_error(image, output)
+    return np.mean(np.absolute(image.numpy() - model.predict(image, verbose=0)), axis=(1, 2, 3))
 
 
 def get_predictions_labels(dataset, model, conf):
     images, labels = split_inputs_labels(dataset)
-    labels = np.concatenate(list(labels.as_numpy_iterator()))
+    labels = labels.unbatch().get_single_element()
+    ic(images.shape)
+    ic(labels.shape)
     probas = model.predict(images)
     if conf.label_type == "categorical":
         probas = probas[..., 1]
         labels = labels[..., 1]
     return probas, labels
+
+
+def get_reconstruction_errors(dataset, model, conf):
+    images, labels = split_inputs_labels(dataset)
+    labels = labels.unbatch().get_single_element()
+
+    ic(images.shape)
+    ic(labels.shape)
+    probas = model.predict(images)
+    if conf.label_type == "categorical":
+        probas = probas[..., 1]
+        labels = labels[..., 1]
+    return probas, labels
+
+
+if __name__ == '__main__':
+    conf = Config(method="supervised", trial_id="latest", mode="train")
+
+    ds = get_dataset("train", conf)
+    model = keras.models.load_model(os.path.join(conf.model_dir, "model.keras"))
+    model = supervised_anomaly_detector(input_shape=conf.input_shape)
+    model.load_weights(os.path.join(conf))
+    prob, label = get_predictions_labels(ds, model, conf)
+    print()

@@ -56,7 +56,8 @@ class Config:
         self.trial_dir = os.path.join(TRIALS_DIR, self.method, str(self.trial_id))
         self.model_dir = os.path.join(str(self.trial_dir), "model")
         self.metrics_dir = os.path.join(str(self.trial_dir), "metrics")
-        [os.makedirs(_dir, exist_ok=True) for _dir in [self.model_dir, self.metrics_dir]]
+        if self.mode == "train":
+            [os.makedirs(_dir, exist_ok=True) for _dir in [self.model_dir, self.metrics_dir]]
 
         self.class_names = class_names
         self.label_type = label_type
