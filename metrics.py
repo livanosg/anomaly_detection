@@ -3,7 +3,6 @@ import os
 import numpy as np
 import matplotlib as mpl
 import pandas as pd
-from icecream import ic
 from matplotlib import pyplot as plt
 from sklearn.metrics import PrecisionRecallDisplay, ConfusionMatrixDisplay, RocCurveDisplay, classification_report
 
@@ -36,10 +35,6 @@ def plot_metrics(title, y_true, y_prob, y_pred, threshold, conf, save=True):
     axs[1, 0].set_title(f"{axis_title} distribution")
     axs[1, 0].set_ylabel("N Samples")
     axs[1, 0].set_xlabel(f"{axis_title}")
-    ic(np.asarray(y_prob)[np.logical_and(y_true == 0, y_pred == 0)])
-    ic(len(np.logical_and(y_true == 0, y_pred == 1)))
-    ic(len(np.logical_and(y_true == 1, y_pred == 0)))
-    ic(len(np.logical_and(y_true == 1, y_pred == 1)))
     axs[1, 0].hist([y_prob[np.logical_and(y_true == 0, y_pred == 0)],
                     y_prob[np.logical_and(y_true == 0, y_pred == 1)],
                     y_prob[np.logical_and(y_true == 1, y_pred == 0)],
