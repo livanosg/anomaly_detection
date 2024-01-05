@@ -43,7 +43,7 @@ def eu_threshold(precision, recall, thresholds):
 def get_threshold(dataset, model, conf, save=True):
     if conf.model_type == "autoencoder":
         rec_err, y_true = get_reconstruction_errors_labels(dataset=dataset, model=model)
-        threshold = np.mean(rec_err) + np.std(rec_err)
+        threshold = np.mean(rec_err)
     elif conf.model_type == "classifier":
         y_out, y_true = get_pred_labels(dataset, model, conf)
         prec, rec, thresh = precision_recall_curve(y_true=y_true, probas_pred=y_out, pos_label=conf.pos_label)
