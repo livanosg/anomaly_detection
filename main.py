@@ -66,5 +66,8 @@ if conf.mode == "validation":
         dataset = get_dataset(data_name, conf=conf)
         validate_model(dataset_name=data_name, dataset=dataset, model=model, threshold=threshold, conf=conf, save=True)
 if conf.mode == "predict":
-    threshold = 0.8
+    if conf.model_type == "classifier":
+        threshold = 0.8
+    if conf.model_type == "autoencoder":
+        threshold = 0.
     inspect_data(dataset=get_dataset("all", conf=conf), model=model, threshold=threshold, conf=conf)
