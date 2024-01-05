@@ -4,10 +4,16 @@ import numpy as np
 
 def inspect_data(dataset, model, threshold, conf):
     """
-    Allows interactive inspection of images, either with or without a trained model.
+    Inspect and visualize predictions on a dataset using the provided model and threshold.
 
-    Note:
-        This function displays images interactively and accepts user input for inspection.
+    Parameters:
+    - dataset (tf.data.Dataset): Dataset to be inspected.
+    - model (keras.Model): Trained model for making predictions.
+    - threshold (float): Decision threshold for classification.
+    - conf (Config): Configuration object.
+
+    Returns:
+    None
     """
     paused = False
     window_name = "Inspection tool"

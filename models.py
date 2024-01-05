@@ -4,6 +4,15 @@ from keras.layers import MaxPooling2D, Convolution2DTranspose, GlobalAveragePool
 
 
 def classifier(input_shape):
+    """
+    Create a convolutional neural network classifier.
+
+    Parameters:
+    - input_shape (tuple): The shape of input data (height, width, channels).
+
+    Returns:
+    - Sequential: Keras Sequential model representing the classifier.
+    """
     return Sequential([
         Input(input_shape),
         Conv2D(64, 3, padding="same", activation="relu"),  # 224
@@ -24,6 +33,15 @@ def classifier(input_shape):
 
 
 def autoencoder(input_shape):
+    """
+        Create a convolutional neural network autoencoder.
+
+        Parameters:
+        - input_shape (tuple): The shape of input data (height, width, channels).
+
+        Returns:
+        - Sequential: Keras Sequential model representing the autoencoder.
+        """
     return Sequential(
         [Input(shape=input_shape),
          Conv2D(64, 3, activation="relu", padding="same"),  # 224

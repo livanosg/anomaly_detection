@@ -8,6 +8,22 @@ from sklearn.metrics import PrecisionRecallDisplay, ConfusionMatrixDisplay, RocC
 
 
 def plot_metrics(title, y_true, y_prob, y_pred, threshold, conf, save=True):
+    """
+    Plot various classification metrics including Precision-Recall curve, ROC curve,
+    probability distribution, and confusion matrix.
+
+    Parameters:
+    - title (str): Title for the plot.
+    - y_true (array-like): True labels.
+    - y_prob (array-like): Predicted probabilities.
+    - y_pred (array-like): Predicted labels.
+    - threshold (float): Threshold for classification.
+    - conf (Config): Configuration object.
+    - save (bool): Whether to save the plot and report.
+
+    Returns:
+    - None
+    """
     report = classification_report(y_true=y_true, y_pred=y_pred, target_names=conf.class_names, digits=3)
     print(report)
     plt.style.use("ggplot")
@@ -62,6 +78,17 @@ def plot_metrics(title, y_true, y_prob, y_pred, threshold, conf, save=True):
 
 
 def plot_training_history(history, conf, save=True):
+    """
+    Plot the training history, including metrics such as loss and accuracy.
+
+    Parameters:
+    - history (dict): Dictionary containing training history.
+    - conf (Config): Configuration object.
+    - save (bool): Whether to save the plot.
+
+    Returns:
+    - None
+    """
     history_df = pd.DataFrame.from_dict(history)
     metrics = [metric for metric in history_df.columns if not (metric.startswith("val_") or metric.startswith("epoch"))]
 

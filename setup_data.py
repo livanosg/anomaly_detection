@@ -28,10 +28,14 @@ DATASETS = {"train": os.path.join(DATA_DIR, "train"),
 
 def download_data(url, save_path):
     """
-    Downloads a file from a remote URL and saves it to a local directory.
+    Download a file from a given URL and save it to the specified path.
+
+    Parameters:
+    - url (str): URL of the file to be downloaded.
+    - save_path (str): Path to save the downloaded file.
 
     Returns:
-        None
+    - None
     """
     file_name = os.path.basename(url)
 
@@ -60,7 +64,14 @@ def download_data(url, save_path):
 
 def extract_images(from_video, to_dir):
     """
-    Extract frames from a video and save them as images.
+    Extract frames from a video file and save them as individual images in the specified directory.
+
+    Parameters:
+    - from_video (str): Path to the input video file.
+    - to_dir (str): Directory to save the extracted images.
+
+    Returns:
+    - None
     """
     print(f"Extract: {from_video}\n     to: {to_dir}")
     video = cv2.VideoCapture(from_video)
@@ -97,12 +108,13 @@ def _get_label(image_path):
 
 def create_csv(dataset_dir):
     """
-    Creates a CSV file containing image filenames and corresponding labels.
+    Create a CSV file containing information about images in a dataset.
 
-    The labels are determined using the _get_label function and are based on the presence
-    of images in the ANOMALY_INDICES set.
+    Parameters:
+    - dataset_dir (str): Directory containing the dataset.
 
-    The resulting CSV file is saved in the DATA_DIR directory with the name "data.csv".
+    Returns:
+    - None
     """
     data = pd.concat(
         [pd.DataFrame(data={"images": os.listdir(os.path.join(dataset_dir, str(_class)))}) for _class in CLASS_NAMES])
@@ -113,13 +125,15 @@ def create_csv(dataset_dir):
 
 def split_train_val(val_size=0.1, test_size=0.1):
     """
-    Splits the dataset into training, validation, and test sets based on specified sizes.
+        Split the dataset into training, validation, and test sets.
 
-    Args:
-        val_size (float): Fraction of the dataset to use for validation.
-        test_size (float): Fraction of the dataset to use for test.
-    """
+        Parameters:
+        - val_size (float): Proportion of the dataset to be used for validation.
+        - test_size (float): Proportion of the dataset to be used for testing.
 
+        Returns:
+        - None
+        """
     df = pd.read_csv(os.path.join(DATASETS["all"], f"{os.path.basename(DATASETS['all'])}_data.csv"))
     train_data = anomalies[:int(len(anomalies) * (1 - (val_size + test_size)))]
     val_data = anomalies[len(train_data): int(len(anomalies) * (1 - test_size))]

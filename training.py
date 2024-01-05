@@ -10,6 +10,18 @@ from metrics import plot_training_history
 
 
 def training(train_ds, val_ds, model, conf):
+    """
+    Train a Keras model using the provided training and validation datasets and configurations.
+
+    Parameters:
+    - train_ds (tf.data.Dataset): Training dataset.
+    - val_ds (tf.data.Dataset): Validation dataset.
+    - model (keras.Model): Keras model to be trained.
+    - conf (Config): Configuration object.
+
+    Returns:
+    - keras.Model: Trained model.
+    """
     callbacks = [ModelCheckpoint(filepath=os.path.join(conf.model_dir, "model.keras"), save_best_only=True),
                  BackupAndRestore(os.path.join(conf.model_dir, "backup"), delete_checkpoint=False),
                  CSVLogger(os.path.join(conf.model_dir, "history.csv"), append=True),

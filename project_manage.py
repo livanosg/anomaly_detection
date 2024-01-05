@@ -7,38 +7,24 @@ CLASS_NAMES = ("normal", "anomaly")
 
 class Config:
     """
-    Configuration class for machine learning or deep learning experiments.
+    Configuration class for training and experimenting with models.
 
     Attributes:
-    - TRIALS_DIR (str): Directory path for storing experiment trials.
-
-    Parameters:
-    - trial_id (str or None): Identifier for the experiment. If None, a timestamp will be generated.
-    - model_type (str): Type of the model, e.g., 'classifier'.
-    - mode (str): Mode of operation, should be 'train' or another mode depending on the project.
-    - threshold_type (str): Type of threshold used, e.g., 'f1'.
-    - class_names (tuple): Tuple of class names, default is ("normal", "anomaly").
-    - pos_label (int): Positive label for binary classification, default is 1.
-    - input_shape (tuple): Shape of the input data, default is (224, 224, 3).
-    - batch_size (int): Batch size for training, default is 32.
-    - learning_rate (float): Learning rate for the optimizer, default is 1e-3.
-    - epochs (int): Number of training epochs, default is 50.
-    - seed (int): Seed for random number generation, default is 1312.
-
-    Attributes:
-    - model_type (str): Lowercased version of the provided model_type.
-    - trial_id (str): Experiment identifier.
-    - trial_dir (str): Directory path for the current experiment.
-    - model_dir (str): Directory path for saving the trained model.
-    - metrics_dir (str): Directory path for saving experiment metrics.
-    - mode (str): Lowercased version of the provided mode.
+    - TRIALS_DIR (str): The root directory for storing experiment trials.
+    - trial_id (str): Unique identifier for the current trial.
+    - model_type (str): Type of the model (e.g., "autoencoder").
+    - mode (str): Operating mode ("train" or other).
+    - threshold_type (str): Type of threshold used for evaluation.
+    - class_names (tuple): Tuple of class names.
+    - pos_label (int): Positive label for binary classification.
+    - input_shape (tuple): Shape of the input data (height, width, channels).
+    - batch_size (int): Batch size for training.
+    - learning_rate (float): Learning rate for training.
+    - epochs (int): Number of training epochs.
+    - seed (int): Seed for random number generation.
 
     Methods:
-    - No public methods are defined in this class.
-
-    Usage:
-    config = Config(trial_id="exp1", model_type="classifier", epochs=100)
-    print(config.learning_rate)  # Accessing configuration parameters.
+    - __init__: Initialize the configuration with specified or default values.
     """
     TRIALS_DIR = os.path.join(ROOT_DIR, "trials")
 
