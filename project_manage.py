@@ -50,7 +50,7 @@ class Config:
                  class_names=CLASS_NAMES,
                  pos_label=1,
                  input_shape=(224, 224, 3),
-                 batch_size=64,
+                 batch_size=128,
                  learning_rate=1e-3,
                  epochs=50,
                  seed=1312):

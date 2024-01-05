@@ -6,7 +6,6 @@ from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, BackupAndRestore
 from keras.optimizers import Adam
 from keras.losses import CategoricalCrossentropy, MeanAbsoluteError
 
-from datasets import get_autoencoder_dataset
 from metrics import plot_training_history
 
 
