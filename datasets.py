@@ -46,7 +46,7 @@ def get_dataset(dataset_name, conf, shuffle=False, augment=False, keep_label=Non
 
     if keep_label:
         ds = get_filtered_dataset(ds, conf, keep_label=keep_label)
-
+    ds = ds.cache()
     if augment:
         ds = ds.map(lambda image, label: _augm(image, label), num_parallel_calls=tf.data.AUTOTUNE, name="image_augm")
     ds = ds.map(lambda image, label: (image / 255., label), num_parallel_calls=tf.data.AUTOTUNE, name="normalize")
