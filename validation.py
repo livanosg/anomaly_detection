@@ -1,11 +1,8 @@
 import os
 
 import numpy as np
-import tensorflow as tf
-from keras.losses import MeanAbsoluteError
+from icecream import ic
 from sklearn.metrics import precision_recall_curve
-
-from datasets import get_dataset
 from metrics import plot_metrics
 
 
@@ -18,23 +15,18 @@ def get_outputs_labels(dataset, model):
 def get_reconstruction_errors_labels(dataset, model):
     rec_errs = []
     labels = []
-    mae = MeanAbsoluteError(reduction=tf.keras.losses.Reduction.NONE)
-    for image, label in dataset:
-        output = model.predict(image, verbose=False)
-        rec_errs.append(np.mean(mae(image, output), axis=tuple(range(1, output.ndim - 1))))
+    for image, label in dataset.unbatch().batch(1):
+        output = model.evaluate(image, image, verbose=False)[0]
+        rec_errs.append(output)
         labels.append(label)
-    return np.concatenate(rec_errs), np.concatenate(labels)
+    rec_errs = np.asarray(rec_errs)
+    labels = np.argmax(np.concatenate(labels), axis=-1)
+    return rec_errs, labels
 
 
-def get_pred_labels(dataset_name, model, conf):
-    if conf.model_type == "classifier":
-        y_out, y_true = get_outputs_labels(get_dataset(dataset_name, conf=conf), model)
-        y_out = y_out[..., conf.pos_label]
-    elif conf.model_type == "autoencoder":
-        rec_err, y_true = get_reconstruction_errors_labels(get_dataset(dataset_name, conf=conf), model)
-        y_out = rec_err
-    else:
-        raise ValueError(f"Unknown type: {conf.model_type} ")
+def get_pred_labels(dataset, model, conf):
+    y_out, y_true = get_outputs_labels(dataset=dataset, model=model)
+    y_out = y_out[..., conf.pos_label]
     y_true = np.argmax(y_true, axis=-1)
     return y_out, y_true
 
@@ -48,22 +40,35 @@ def eu_threshold(precision, recall, thresholds):
     return thresholds[np.argmin(euclidean_distance)]
 
 
-def get_threshold(dataset_name, model, conf, save=True):
-    y_out, y_true = get_pred_labels(dataset_name, model, conf)
-    threshold = 0.5
-    if conf.threshold_type:
+def get_threshold(dataset, model, conf, save=True):
+    if conf.model_type == "autoencoder":
+        rec_err, y_true = get_reconstruction_errors_labels(dataset=dataset, model=model)
+        threshold = np.mean(rec_err) + np.std(rec_err)
+    elif conf.model_type == "classifier":
+        y_out, y_true = get_pred_labels(dataset, model, conf)
         prec, rec, thresh = precision_recall_curve(y_true=y_true, probas_pred=y_out, pos_label=conf.pos_label)
         if conf.threshold_type == "f1":
             threshold = f1_threshold(prec, rec, thresh)
-        if conf.threshold_type == "euclidean":
+        elif conf.threshold_type == "euclidean":
             threshold = eu_threshold(prec, rec, thresh)
+        else:
+            raise ValueError(f"Unknown threshold type: {conf.threshold_type}.")
+    else:
+        raise ValueError(f"Unknown model type: {conf.model_type}.")
     if save:
         np.save(os.path.join(conf.model_dir, "threshold.npy"), threshold)
     return threshold
 
 
-def validate_model(dataset_name, model, threshold, conf, save):
-    y_out, y_true = get_pred_labels(dataset_name, model, conf)
-    y_pred = np.greater_equal(y_out, threshold)
+def validate_model(dataset_name, dataset, model, threshold, conf, save):
+    if conf.model_type == "classifier":
+        y_out, y_true = get_pred_labels(dataset, model, conf)
+        y_pred = np.greater_equal(y_out, threshold).astype(int)
+    elif conf.model_type == "autoencoder":
+        rec_err, y_true = get_reconstruction_errors_labels(dataset=dataset, model=model)
+        y_pred = np.greater_equal(rec_err, threshold).astype(int)
+        y_out = rec_err
+    else:
+        raise ValueError(f"Unknown model type {conf.model_type}.")
     plot_metrics(title=dataset_name, y_true=y_true, y_prob=y_out, y_pred=y_pred, threshold=threshold,
                  conf=conf, save=save)

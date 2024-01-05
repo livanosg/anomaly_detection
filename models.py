@@ -28,12 +28,12 @@ def autoencoder(input_shape):
         [Input(shape=input_shape),
          Conv2D(64, 3, activation="relu", padding="same"),  # 224
          MaxPooling2D(),
-         Conv2D(32, 3, activation="relu", padding="same"),  # 112
+         Conv2D(64, 3, activation="relu", padding="same"),  # 112
          MaxPooling2D(),
-         Conv2D(16, 3, activation="relu", padding="same"),  # 56
+         Conv2D(32, 3, activation="relu", padding="same"),  # 56
          MaxPooling2D(),
-         Convolution2DTranspose(16, 3, (2, 2), activation="relu", padding="same"),  # 56
-         Convolution2DTranspose(32, 3, (2, 2), activation="relu", padding="same"),  # 112
+         Convolution2DTranspose(32, 3, (2, 2), activation="relu", padding="same"),  # 56
+         Convolution2DTranspose(64, 3, (2, 2), activation="relu", padding="same"),  # 112
          Convolution2DTranspose(64, 3, (2, 2), activation="relu", padding="same"),  # 224
          Conv2D(3, 3, activation="sigmoid", padding="same")  # 224
          ])

@@ -23,8 +23,6 @@ def training(train_ds, val_ds, model, conf):
         metrics += [F1Score(average="macro")]
         loss = CategoricalCrossentropy()  # CategoricalFocalCrossentropy()
     if conf.model_type == "autoencoder":
-        train_ds, _ = get_autoencoder_dataset(train_ds, conf, keep_label=0)  # Keep normal
-        val_ds, _ = get_autoencoder_dataset(val_ds, conf)
         metrics += [MeanSquaredError()]
         loss = MeanAbsoluteError()
 
