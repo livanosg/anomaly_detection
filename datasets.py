@@ -4,7 +4,7 @@ from keras.utils import image_dataset_from_directory
 from setup_data import DATASETS
 
 
-def get_basic_augm_pipeline(seed):
+def get_basic_augmentation_pipeline(seed):
     """
         Get a basic image augmentation pipeline using RandAugment and GridMask.
 
@@ -60,10 +60,10 @@ def get_dataset(dataset_name, conf, shuffle=False, augment=False, keep_label=Non
 
     mixup = keras_cv.layers.MixUp(seed=conf.seed)
     fouriermix = keras_cv.layers.FourierMix(seed=conf.seed)
-    pipeline = get_basic_augm_pipeline(conf.seed)
+    pipeline = get_basic_augmentation_pipeline(conf.seed)
 
     # noinspection PyCallingNonCallable
-    def _augm(image, label):
+    def augmentation(image, label):
         inputs = {"images": image, "labels": label}
         inputs = mixup(inputs)
         inputs = fouriermix(inputs)
@@ -74,7 +74,8 @@ def get_dataset(dataset_name, conf, shuffle=False, augment=False, keep_label=Non
         ds = get_filtered_dataset(ds, conf, keep_label=keep_label)
     ds = ds.cache()
     if augment:
-        ds = ds.map(lambda image, label: _augm(image, label), num_parallel_calls=tf.data.AUTOTUNE, name="image_augm")
+        ds = ds.map(lambda image, label: augmentation(image, label),
+                    num_parallel_calls=tf.data.AUTOTUNE, name="image-augmentation")
     ds = ds.map(lambda image, label: (image / 255., label), num_parallel_calls=tf.data.AUTOTUNE, name="normalize")
     return ds.prefetch(buffer_size=tf.data.AUTOTUNE)
 

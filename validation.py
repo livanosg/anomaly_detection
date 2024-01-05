@@ -1,7 +1,6 @@
 import os
 
 import numpy as np
-from icecream import ic
 from sklearn.metrics import precision_recall_curve
 from metrics import plot_metrics
 

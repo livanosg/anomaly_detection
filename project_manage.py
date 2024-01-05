@@ -29,9 +29,9 @@ class Config:
     TRIALS_DIR = os.path.join(ROOT_DIR, "trials")
 
     def __init__(self,
-                 trial_id=None,  # "latest",
-                 model_type="autoencoder",
-                 mode="train",
+                 trial_id="latest",
+                 model_type="classifier",
+                 mode="predict",
                  threshold_type="f1",
                  class_names=CLASS_NAMES,
                  pos_label=1,
