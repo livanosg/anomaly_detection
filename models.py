@@ -10,14 +10,14 @@ def classifier(input_shape):
         Dropout(0.2),
         BatchNormalization(),
         MaxPooling2D(),
-        Conv2D(64, 3, padding="same", activation="relu"),  # 224
+        Conv2D(64, 3, padding="same", activation="relu"),  # 112
         Dropout(0.2),
         MaxPooling2D(),
-        Conv2D(128, 3, padding="same", activation="relu"),  # 224
+        Conv2D(128, 3, padding="same", activation="relu"),  # 56
         Dropout(0.2),
         BatchNormalization(),
         MaxPooling2D(),
-        Conv2D(256, 3, padding="same"),  # 224
+        Conv2D(256, 3, padding="same"),  # 28
         GlobalAveragePooling2D(),
         Dense(2, activation="softmax")
     ])
